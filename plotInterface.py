@@ -23,6 +23,12 @@ dataDir = ''    # This global variable will store the path to the folder contain
 # ==================================== Plot Generating Functions===================================
 
 
+######general setting plotting
+plt.rcParams['axes.grid'] = True
+
+
+
+
 # Produces general plots containing plots for power, current, and voltage for each cycle
 def makeCombinedPlots():
     def plotSensor(sensorNum):
@@ -117,9 +123,9 @@ def makeCombinedPlots():
                 print('Cycle {} not found for charging'.format(i))
                 continue
             color = colors[i % len(colors)]
-            currentChargingPlot.plot(chargeTime, supplyCurrentC[i - 1], label='Cycle {}'.format(i), color=color)
-            voltageChargingPlot.plot(chargeTime, supplyVoltageC[i - 1], label='Cycle {}'.format(i), color=color)
-            powerChargingPlot.plot(chargeTime, supplyPowerC[i - 1], label='Cycle {}'.format(i), color=color)
+            currentChargingPlot.plot(chargeTime, supplyCurrentC[i - 1], label='Cycle {}'.format(i), color=color, alpha=0.8)
+            voltageChargingPlot.plot(chargeTime, supplyVoltageC[i - 1], label='Cycle {}'.format(i), color=color, alpha=0.8)
+            powerChargingPlot.plot(chargeTime, supplyPowerC[i - 1], label='Cycle {}'.format(i), color=color, alpha=0.8)
         for j in cycles:
             try:
                 dischargeTime = np.arange(0, len(loadCurrentD[j - 1]))
@@ -127,9 +133,9 @@ def makeCombinedPlots():
                 print('Cycle {} not found for discharging'.format(j))
                 continue
             color = colors[j % len(colors)]
-            currentDischargingPlot.plot(dischargeTime, loadCurrentD[j - 1], label='Cycle {}'.format(j), color=color)
-            voltageDischargingPlot.plot(dischargeTime, loadVoltageD[j - 1], label='Cycle {}'.format(j), color=color)
-            powerDischargingPlot.plot(dischargeTime, loadPowerD[j - 1], label='Cycle {}'.format(j), color=color)
+            currentDischargingPlot.plot(dischargeTime, loadCurrentD[j - 1], label='Cycle {}'.format(j), color=color, alpha=0.8)
+            voltageDischargingPlot.plot(dischargeTime, loadVoltageD[j - 1], label='Cycle {}'.format(j), color=color, alpha=0.8)
+            powerDischargingPlot.plot(dischargeTime, loadPowerD[j - 1], label='Cycle {}'.format(j), color=color, alpha=0.8)
         for plot in [currentChargingPlot, voltageChargingPlot, powerChargingPlot, currentDischargingPlot,
                      voltageDischargingPlot, powerDischargingPlot]:
             plot.legend()

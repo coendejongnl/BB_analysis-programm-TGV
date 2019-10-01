@@ -14,6 +14,7 @@ import dataReader
 import os
 import sys
 
+from cycler import cycler #used to cycle through styles
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -21,11 +22,19 @@ import pandas as pd
 # ================================================================================================
 dataDir = ''    # This global variable will store the path to the folder containing all data.  Used by every import function
 # ==================================== Plot Generating Functions===================================
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown',
+      'tab:pink', 'tab:gray', 'tab:olive', 'tab:olive', 'indigo', 'navy', 'tan', 'black',
+      'lightgreen', 'lightcoral', 'cadetblue']
+cc = cycler(linestyle=[ '--', '-.',':','-']) * (cycler(color=colors))     
 
+plt.rc('axes', prop_cycle=cc)
 
 ######general setting plotting
-plt.rcParams['axes.grid'] = True
 
+# grid on for all plots
+plt.rcParams['axes.grid'] = True
+#transparancy plots 
+alpha1=0.8  
 
 
 
@@ -116,6 +125,7 @@ def makeCombinedPlots():
         colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown',
                   'tab:pink', 'tab:gray', 'tab:olive', 'tab:olive', 'indigo', 'navy', 'tan', 'black',
                   'lightgreen', 'lightcoral', 'cadetblue']
+        cc = cycler(linestyle=[ '--', '-.',':','-']) * (cycler(color=colors))     
         for i in cycles:   # Plot the charging cycles first
             try:
                 chargeTime = np.arange(0, len(supplyCurrentC[i - 1]))
@@ -123,9 +133,9 @@ def makeCombinedPlots():
                 print('Cycle {} not found for charging'.format(i))
                 continue
             color = colors[i % len(colors)]
-            currentChargingPlot.plot(chargeTime, supplyCurrentC[i - 1], label='Cycle {}'.format(i), color=color, alpha=0.8)
-            voltageChargingPlot.plot(chargeTime, supplyVoltageC[i - 1], label='Cycle {}'.format(i), color=color, alpha=0.8)
-            powerChargingPlot.plot(chargeTime, supplyPowerC[i - 1], label='Cycle {}'.format(i), color=color, alpha=0.8)
+            currentChargingPlot.plot(chargeTime, supplyCurrentC[i - 1], label='Cycle {}'.format(i), color=color, alpha=alpha1)
+            voltageChargingPlot.plot(chargeTime, supplyVoltageC[i - 1], label='Cycle {}'.format(i), color=color, alpha=alpha1)
+            powerChargingPlot.plot(chargeTime, supplyPowerC[i - 1], label='Cycle {}'.format(i), color=color, alpha=alpha1)
         for j in cycles:
             try:
                 dischargeTime = np.arange(0, len(loadCurrentD[j - 1]))
@@ -133,9 +143,9 @@ def makeCombinedPlots():
                 print('Cycle {} not found for discharging'.format(j))
                 continue
             color = colors[j % len(colors)]
-            currentDischargingPlot.plot(dischargeTime, loadCurrentD[j - 1], label='Cycle {}'.format(j), color=color, alpha=0.8)
-            voltageDischargingPlot.plot(dischargeTime, loadVoltageD[j - 1], label='Cycle {}'.format(j), color=color, alpha=0.8)
-            powerDischargingPlot.plot(dischargeTime, loadPowerD[j - 1], label='Cycle {}'.format(j), color=color, alpha=0.8)
+            currentDischargingPlot.plot(dischargeTime, loadCurrentD[j - 1], label='Cycle {}'.format(j), color=color, alpha=alpha1)
+            voltageDischargingPlot.plot(dischargeTime, loadVoltageD[j - 1], label='Cycle {}'.format(j), color=color, alpha=alpha1)
+            powerDischargingPlot.plot(dischargeTime, loadPowerD[j - 1], label='Cycle {}'.format(j), color=color, alpha=alpha1)
         for plot in [currentChargingPlot, voltageChargingPlot, powerChargingPlot, currentDischargingPlot,
                      voltageDischargingPlot, powerDischargingPlot]:
             plot.legend()

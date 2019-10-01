@@ -35,6 +35,7 @@ plt.rc('axes', prop_cycle=cc)
 plt.rcParams['axes.grid'] = True
 #transparancy plots 
 alpha1=0.8  
+alpha2=1
 
 
 
@@ -122,10 +123,7 @@ def makeCombinedPlots():
         # Draw curves in each plot
 
         # Explicitly define uniform colors so that each plot's cycles have the same color
-        colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown',
-                  'tab:pink', 'tab:gray', 'tab:olive', 'tab:olive', 'indigo', 'navy', 'tan', 'black',
-                  'lightgreen', 'lightcoral', 'cadetblue']
-        cc = cycler(linestyle=[ '--', '-.',':','-']) * (cycler(color=colors))     
+      
         for i in cycles:   # Plot the charging cycles first
             try:
                 chargeTime = np.arange(0, len(supplyCurrentC[i - 1]))
@@ -201,7 +199,7 @@ def makeLevelPlots():
             fig.add_subplot(3, 1, 3)    # Let the total plot take up twice the normal width
         else:
             fig.add_subplot(3, 2, i)
-        plt.plot(level)
+        plt.plot(level,ls="-")
         plt.title(title)
         plt.xlabel('Time (s)')
         plt.ylabel('Volume ($m^3$)')
@@ -247,12 +245,12 @@ def makeConductivityPlots():
     fig.subplots_adjust(hspace=0.4)
     fig.suptitle('Conductivity Data')
     for i, cond in enumerate(conductivities, 1):
-        fig.add_subplot(3, 2, i)
-        plt.plot(cond)
+        fig.add_subplot(3, 1, int(np.around(i/2+0.5,decimals=1)))
+        plt.plot(cond,ls=":",alpha=alpha2)
         plt.title('Conducitivity Sensor {}'.format(i))
         plt.xlabel('Time (s)')
         plt.ylabel('Conductivity ($\\frac{mS}{cm}$)')
-        if includeCycles:
+        if includeCycles and i%2==0:
             dataReader.colorPlotCycles(dataDir, sensorUsed)  # Color the background
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()

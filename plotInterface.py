@@ -247,7 +247,8 @@ def makeConductivityPlots():
     for i, cond in enumerate(conductivities, 1):
         fig.add_subplot(3, 1, int(np.around(i/2+0.5,decimals=1)))
         plt.plot(cond,ls=":",alpha=alpha2)
-        plt.title('Conducitivity Sensor {}'.format(i))
+        if i%2==0:
+            plt.title('Conducitivity Sensor {}'.format(i))
         plt.xlabel('Time (s)')
         plt.ylabel('Conductivity ($\\frac{mS}{cm}$)')
         if includeCycles and i%2==0:
@@ -561,12 +562,13 @@ def makeConcentrationPlot():
     fig.subplots_adjust(hspace=0.4)
     fig.suptitle('Concentrations')
     for i, conc in enumerate(concentrations, 1):
-        fig.add_subplot(3, 2, i)
-        plt.plot(conc, label='Data')
+        fig.add_subplot(3, 1,int(np.round(i/2+0.5,decimals=1)))
+        if i%2==0: 
+            plt.plot(conc, ls=":")
         plt.title('Conductivity Sensor {}'.format(i))
         plt.xlabel('Time (s)')
         plt.ylabel('Concentration (mol/L)')
-        if includeCycles:
+        if includeCycles and i%2==0:
             dataReader.colorPlotCycles(dataDir, sensorUsed)
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()

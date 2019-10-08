@@ -3,6 +3,7 @@ import directoryGetter
 import calculations as calc
 import dataGetters as getters
 import dataReader
+import pathlib
 
 import os
 import sys
@@ -48,7 +49,7 @@ def makeCombinedPlots():
 
         # Create plot skeletons to be drawn over with proper data
         fig = plt.figure()
-        fig.subplots_adjust(hspace=0.4)
+        fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
         currentChargingPlot = fig.add_subplot(3, 2, 1)
         plt.xlabel('Time (s)')
         plt.ylabel('Current (A)')
@@ -133,10 +134,19 @@ def makeCombinedPlots():
             powerDischargingPlot.plot(dischargeTime, loadPowerD[j - 1], label='Cycle {}'.format(j), color=color, alpha=alpha1)
         for plot in [currentChargingPlot, voltageChargingPlot, powerChargingPlot, currentDischargingPlot,
                      voltageDischargingPlot, powerDischargingPlot]:
-            plot.legend()
+            plot.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
         mng = plt.get_current_fig_manager()
         mng.full_screen_toggle()
         plt.show()
+       
+        window =fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        window2=window
+        window.x1=window.x1/2
+        fig.savefig(str(dataDir+"figures/supply.png"),bbox_inches=window.expanded(1.05,1.05))
+        window2.x0=window2.x1
+        window2.x1=window2.x1*2
+        fig.savefig(str(dataDir+"figures/load.png"),bbox_inches=window.expanded(1.05,1.05))
+
 
     while True:
         sensorNum = input('Enter stack number (select from {})\n'.format(calc.usedStacks))
@@ -177,7 +187,7 @@ def makeLevelPlots():
     levels = np.vstack((levels, totalLevel))
 
     fig = plt.figure()
-    fig.subplots_adjust(hspace=0.4)
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Water Levels')
     for i, level in enumerate(levels, 1):
         title = 'Level Sensor {}'.format(i)
@@ -229,7 +239,7 @@ def makeConductivityPlots():
     includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
 
     fig = plt.figure()
-    fig.subplots_adjust(hspace=0.4)
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Conductivity Data')
     for i, cond in enumerate(conductivities, 1):
         fig.add_subplot(3, 1, int(np.around(i/2+0.5,decimals=1)))
@@ -311,7 +321,7 @@ def makeEfficiencies():
 
         fig = plt.figure()
         fig.suptitle('Load / Supply {} Efficiencies'.format(sensorNum))
-        fig.subplots_adjust(hspace=0.4)
+        fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
 
         fig.add_subplot(2, 1, 1)
         plt.title('Roundtrip Efficiency')
@@ -352,7 +362,7 @@ def makeIVCurves():
         fig.add_subplot(111)
         for cycle in range(totalCycles):
             plt.plot(np.max(loadVoltageD[cycle]), np.max(loadCurrentD[cycle]), 'o', label='Cycle {}'.format(cycle + 1))
-        plt.legend()
+        plt.legend( )
         plt.xlabel('Voltage (V)')
         plt.ylabel('Current (A)')
         mng = plt.get_current_fig_manager()
@@ -387,7 +397,7 @@ def makeFlowPlots():
 
     flows = np.array([getters.getFlowData(dataDir, i) for i in range(1, 3)])
     fig = plt.figure()
-    fig.subplots_adjust(hspace=0.4)
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Flow Rate')
     for i, flow in enumerate(flows, 1):
         title = 'Pump {}'.format(i)
@@ -430,7 +440,7 @@ def makePressurePlots():
     includeCycles = input('Include Cycles in Background? (y/n)\n')
 
     fig = plt.figure()
-    fig.subplots_adjust(hspace=0.4)
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Pressure Levels')
     for i, pressure in enumerate(pressures, 1):
         fig.add_subplot(3, 1, i)
@@ -473,7 +483,7 @@ def makeTempPlots():
     includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
 
     fig = plt.figure()
-    fig.subplots_adjust(hspace=0.4)
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Temperature')
     for i, temp in enumerate(temps, 1):
         fig.add_subplot(3, 2, i)
@@ -546,7 +556,7 @@ def makeConcentrationPlot():
     includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
 
     fig = plt.figure()
-    fig.subplots_adjust(hspace=0.4)
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Concentrations')
     for i, conc in enumerate(concentrations, 1):
         fig.add_subplot(3, 1,int(np.round(i/2+0.5,decimals=1)))

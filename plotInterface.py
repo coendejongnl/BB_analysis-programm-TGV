@@ -10,6 +10,7 @@ import directoryGetter
 import calculations as calc
 import dataGetters as getters
 import dataReader
+import pathlib
 
 import os
 import sys
@@ -28,5 +29,7 @@ dataDir = ''    # This global variable will store the path to the folder
 
 if __name__ == '__main__':
     loadParams()
-    importFiles()
+    dataDir=importFiles()
+    pathlib.Path(str(dataDir)+"figures").mkdir(parents=True, exist_ok=True)
+    
     menu()

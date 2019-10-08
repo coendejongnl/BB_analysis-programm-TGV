@@ -73,26 +73,32 @@ def getConductivityData(dataDir, sensorNum, filtering=True):
 
     if filtering:       # Gets rid of error values and values outside of possible range
 
-        errorCondition = abs(condData[:-1] - ERROR_VALUE) > 0.01
-        valueCondition = [True for i in range(1, len(condData))]
+        errorCondition = abs(condData - ERROR_VALUE) > 0.01
+        valueCondition = np.ones(shape=len(condData))
         if sensorNum in [3, 4, 5, 6]:   # Fresh sensors should never read above 50
-            valueCondition &= (condData[:-1] < 60)
+            valueCondition = (condData < 60)
         else:      # Salt sensors should never read below 30
-            valueCondition &= (condData[:-1] > 30)
+            valueCondition = (condData > 30)
 
-        # Clean the data as long as either condition isn't satisfied
-        while not np.all(errorCondition) or not np.all(valueCondition):
-
-            condData[:-1] = np.where(errorCondition, condData[:-1], condData[1:])
-            condData[:-1] = np.where(valueCondition, condData[:-1], condData[1:])
-
-            errorCondition = abs(condData[:-1] - ERROR_VALUE) > 0.01
-            valueCondition = [True for i in range(1, len(condData))]
-            if sensorNum in [3, 4, 5, 6]:   # Fresh sensors should never read above 50
-                valueCondition &= (condData[:-1] < 70)
-            else:      # Salt sensors should never read below 30
-                valueCondition &= (condData[:-1] > 30)
-        condData = savgol_filter(condData, 11, 5)
+#        # Clean the data as long as either condition isn't satisfied
+#        while not np.all(errorCondition) or not np.all(valueCondition):
+#
+#            condData[:-1] = np.where(errorCondition, condData[:-1], condData[1:])
+#            condData[:-1] = np.where(valueCondition, condData[:-1], condData[1:])
+#
+#            errorCondition = abs(condData[:-1] - ERROR_VALUE) > 0.01
+#            valueCondition = [True for i in range(1, len(condData))]
+#            if sensorNum in [3, 4, 5, 6]:   # Fresh sensors should never read above 50
+#                valueCondition &= (condData[:-1] < 70)
+#            else:      # Salt sensors should never read below 30
+#                valueCondition &= (condData[:-1] > 30)
+            
+            
+        #trying to do Coens method of masking all values
+        condData=np.ma.masked_array(condData,np.logical_or(~errorCondition, ~valueCondition))
+        print("step made")
+            
+#        condData = savgol_filter(condData, 11, 5)
     return condData
 
 

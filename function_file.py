@@ -594,7 +594,7 @@ def makeConcentrationPlot():
 
     includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
     if includeCycles:
-        sensorUsed = input("Which stack is used? (give a number)")
+        sensorUsed = int(input("Which stack is used? (give a number)\n"))
         chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorUsed)
         
         

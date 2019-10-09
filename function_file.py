@@ -142,10 +142,10 @@ def makeCombinedPlots():
         window =fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
         window2=window
         window.x1=window.x1/2
-        fig.savefig(str(dataDir+"figures/supply.png"),bbox_inches=window.expanded(1.05,1.05))
+        fig.savefig(str(dataDir+"data_analysis/figures/supply.png"),bbox_inches=window.expanded(1.05,1.05))
         window2.x0=window2.x1
         window2.x1=window2.x1*2
-        fig.savefig(str(dataDir+"figures/load.png"),bbox_inches=window.expanded(1.05,1.05))
+        fig.savefig(str(dataDir+"data_analysis/figures/load.png"),bbox_inches=window.expanded(1.05,1.05))
 
 
     while True:
@@ -288,13 +288,15 @@ def makeConductivityPlots():
 # including efficiencies, power/energy densities, etc.
 def makeEfficiencies():
     save = input('Save Data to an Excel File? (y/n)\n') in 'yY'
-    if save:
-        fileName = input('Enter Desired File Name\n')
-        if '.xlsx' not in fileName:     # Forgive our poor user for not including the proper file extension
-            fileName += '.xlsx'
+#    if save:
+#        fileName = input('Enter Desired File Name\n')
+#        if '.xlsx' not in fileName:     # Forgive our poor user for not including the proper file extension
+#            fileName += '.xlsx'
 
     # Calculate efficiencies for each load / supply that is being used
-    for sensorNum in calc.usedStacks:  # Don't include a point for 3, since unused
+    
+    for sensorNum in calc.usedStacks:  
+        print("checking "+ str(sensorNum) + " for cycles")
         chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
         if not chargeCycles or not dischargeCycles:     # If the load/supply was not in use
             continue
@@ -342,7 +344,7 @@ def makeEfficiencies():
         if save:
             while True:
                 try:
-                    df.to_excel(fileName, sheet_name='Load + Supply {}'.format(sensorNum), index=False)
+                    df.to_excel(str(dataDir)+"data_analysis/Load + Supply {}.xlsx".format(sensorNum), sheet_name='Load + Supply {}'.format(sensorNum), index=False)
                     break
                 except PermissionError:
                     print('Attempting to Overwrite an Open Excel Workbook.\nPlease Close the Workbook or Change the Name of the Destination File')

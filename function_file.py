@@ -193,7 +193,7 @@ def makeLevelPlots():
         title = 'Level Sensor {}'.format(i)
         if i == len(levels):    # This is the combined level plot
             title = 'Total Volume'
-            fig.add_subplot(3, 1, 3)    # Let the total plot take up twice the normal width
+            fig.add_subplot(3, 2, 6)    # Let the total plot take up twice the normal width
         else:
             fig.add_subplot(3, 2, i)
         plt.plot(level,ls="-")
@@ -205,9 +205,38 @@ def makeLevelPlots():
 
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
+    
+#    window =fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#    
+#    window1=window
+#    window1.x1=window1.x1/2
+#    window1.y1=window1.y1/3
+#    fig.savefig(str(dataDir+"figures/waterlevel1.png"),bbox_inches=window1.expanded(1.05,1.05))
+#    
+#    window2=window
+#    window2.x0=window2.x1/2
+#    window2.y1=window2.y1/3
+#    fig.savefig(str(dataDir+"figures/waterlevel2.png"),bbox_inches=window2.expanded(1.05,1.05))
+#    
+#    window3=window
+#    window3.x0=window.x0
+#    window3.x1=window.x1/2
+#    window3.y0=window.y1/3
+#    window3.y1=window3.y1*2/3
+#    fig.savefig(str(dataDir+"figures/waterlevel3.png"),bbox_inches=window3.expanded(1.05,1.05))
+#    
+#    window4=window
+#    window4.x0=window.x1/2
+#    window4.y0=window.y1/3
+#    window4.y1=window4.y0*2
+#    fig.savefig(str(dataDir+"figures/waterlevel4.png"),bbox_inches=window4.expanded(1.05,1.05))
+#    
+#    window5=window
+#    window5.x0=window.x1/2
+#    window5.y0=window.y1*2/3
+#    window5.y1=window.y1
+#    fig.savefig(str(dataDir+"figures/waterlevel5.png"),bbox_inches=window5.expanded(1.05,1.05))
     plt.show()
-    plt.legend()
-
 
 # Displays six plots of the conductivities, one for each sensor
 def makeConductivityPlots():
@@ -289,18 +318,20 @@ def makeEfficiencies():
                                    'Discharge Time (hours)'])
 
         for cycle in range(min([chargeCycles, dischargeCycles])):
+            print(cycle)
             roundtrip, coulombic, VE, chargePD, dischargePD, energyDensity = calc.getEfficiencies(supplyCurrentC[cycle],
                                                                                                   supplyVoltageC[cycle],
                                                                                                   supplyPowerC[cycle],
                                                                                                   loadCurrentD[cycle],
                                                                                                   loadVoltageD[cycle],
                                                                                                   loadPowerD[cycle])
+            chargePD=np.where(chargePD!=0,chargePD,np.nan)
             PDratio = dischargePD / chargePD
 
-            df.loc[cycle] = [str(int(cycle + 1)), round(roundtrip, 3), round(coulombic, 3),
-                             round(VE, 3), round(chargePD, 3), round(dischargePD, 3),
-                             round(PDratio, 3), round(energyDensity, 3), round(timeC[cycle], 3),
-                             round(timeD[cycle], 3)
+            df.loc[cycle] = [str(int(cycle + 1)), np.round(roundtrip, 3), np.round(coulombic, 3),
+                             np.round(VE, 3), np.round(chargePD, 3), np.round(dischargePD, 3),
+                             np.round(PDratio, 3), np.round(energyDensity, 3), np.round(timeC[cycle], 3),
+                             np.round(timeD[cycle], 3)
                              ]    # Add the efficiency info for current cycle to the bottom of the dataframe
 
         print('--------------------------------------------------------')

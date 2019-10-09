@@ -41,18 +41,22 @@ def getEfficiencies(currentC, voltageC, powerC, currentD, voltageD, powerD, prin
     chargingPower = np.sum(powerC)
     dischargingPower = np.sum(powerD)
     # Roundtrip efficiency = energy discharged / energy charged
+    chargingPower=np.where(chargingPower!=0,chargingPower,np.nan)
     roundtrip = abs(dischargingPower / chargingPower)
 
     totalCurrentC = np.sum(currentC)    # Adding up all the currents gives a measure of total charge
     totalCurrentD = np.sum(currentD)    # Just like integrating
     # Coulombic effiency = Discharged charge / charged charge
+    totalCurrentC=np.where(totalCurrentC!=0,totalCurrentC,np.nan)
+
     coulombic = abs(totalCurrentD / totalCurrentC)
     if printing:
         print('Roundtrip efficiency = {}'.format(roundtrip))
         print('Coulombic efficiency = {}'.format(coulombic))
 
     # Voltage efficiency == roundtrip / coulombic
-    VE = roundtrip / coulombic
+    coulombic1=np.where(coulombic!=0,coulombic,np.nan)
+    VE =roundtrip / coulombic1
 
     # Power Density and power density efficiency
     # Power density == power / memArea
@@ -64,8 +68,11 @@ def getEfficiencies(currentC, voltageC, powerC, currentD, voltageD, powerD, prin
     # energy of discharge / tot volume
     dischargeEnergy = np.zeros(len(powerD))
 
-    for i in range(len(powerD)):  # Integrate
-        dischargeEnergy[i] = np.sum(powerD[:i])
+#    for i in range(len(powerD)):  # Integrate
+#        dischargeEnergy[i] = np.sum(powerD[:i])
+#        
+    #### this should be many times quicker
+    dischargeEnergy=np.cumsum(powerD)
 
     dischargeEnergykWh = dischargeEnergy / (1000 * 3600)
 
@@ -106,3 +113,5 @@ def getConcentration(cond_data, temp_data):
     conc_predict = model.predict(inputs)
     conc_predict = np.clip(conc_predict, 0, np.inf)  # Don't allow negative numbers
     return conc_predict
+
+

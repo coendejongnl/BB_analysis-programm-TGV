@@ -166,12 +166,14 @@ def makeCombinedPlots():
 
 # Plot the values of each level sensor
 def makeLevelPlots():
-    sensorUsed = 0
-    for sensorNum in calc.usedStacks:
-        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
-        if chargeCycles and dischargeCycles:
-            sensorUsed = sensorNum
-            break
+    sensorUsed =int(input("Which stack is used? (give a number)"))
+    sensorNum =sensorUsed
+    
+    chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
+    if chargeCycles and dischargeCycles:
+        sensorUsed = sensorNum
+            
+    
 
     # Option to shade the background with charging / discharging regions
     includeCycles = input('Include Cycles in Background? (y/n)') in 'yY'
@@ -259,13 +261,17 @@ def makeConductivityPlots():
             df = pd.DataFrame(formatData)
             df.to_excel(fileName, index=False)
 
-    sensorUsed = 0
-    for sensorNum in calc.usedStacks:
-        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
-        if chargeCycles and dischargeCycles:
-            sensorUsed = sensorNum
-            break
+
+#    if chargeCycles and dischargeCycles:
+#        sensorUsed = sensorNum
+        
     includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
+    if includeCycles:
+        sensorUsed =int(input("Which stack is used? (give a number)\n"))
+    
+        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorUsed)
+
+        
 
     fig = plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
@@ -420,14 +426,20 @@ def makeIVCurves():
 
 # Make plots with the output from each flow sensor
 def makeFlowPlots():
-    sensorUsed = 0
-    for sensorNum in calc.usedStacks:
-        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
-        if chargeCycles and dischargeCycles:
-            sensorUsed = sensorNum
-            break
-    includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
+    
 
+        
+    includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
+    if includeCycles:
+        sensorUsed =int(input("Which stack is used? (give a number)\n"))
+        sensorNum =sensorUsed
+    
+        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
+        
+        
+        
+        
+        
     flows = np.array([getters.getFlowData(dataDir, i) for i in range(1, 3)])
     fig = plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
@@ -449,12 +461,7 @@ def makeFlowPlots():
 def makePressurePlots():
     filterData = input('Filter Data? (y/n)\n') in 'yY'
 
-    sensorUsed = 0
-    for sensorNum in calc.usedStacks:
-        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
-        if chargeCycles and dischargeCycles:
-            sensorUsed = sensorNum
-            break
+
 
     pressures = [getters.getPressureData(dataDir, i, filtering=filterData) for i in [1, 2, 3]]    # Already smoothed data
     # Give the user the option to save the cleaned data using the savgol filter from getters
@@ -471,7 +478,11 @@ def makePressurePlots():
             df.to_excel(fileName, index=False)
 
     includeCycles = input('Include Cycles in Background? (y/n)\n')
-
+    if includeCycles:
+        sensorUsed =int(input("Which stack is used? (give a number)\n"))
+        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorUsed)
+    
+    
     fig = plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Pressure Levels')
@@ -491,12 +502,7 @@ def makePressurePlots():
 # Plot data from each temperature sensor
 def makeTempPlots():
     filterData = input('Filter Data (y/n)\n') in 'yY'
-    sensorUsed = 0
-    for sensorNum in calc.usedStacks:
-        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
-        if chargeCycles and dischargeCycles:
-            sensorUsed = sensorNum
-            break
+
 
     temps = [getters.getTemperatureData(dataDir, i, filtering=filterData) for i in range(1, 7)]
     if filterData:
@@ -514,6 +520,10 @@ def makeTempPlots():
             df.to_excel(fileName, index=False)
 
     includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
+    if includeCycles:
+        sensorUsed =int(input("Which stack is used? (give a number)"))
+        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorUsed)
+
 
     fig = plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
@@ -580,14 +590,18 @@ def makeConcentrationPlot():
             df = pd.DataFrame(formatData)
             df.to_excel(fileName, index=False)
 
-    sensorUsed = 0
-    for sensorNum in calc.usedStacks:
-        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
-        if chargeCycles and dischargeCycles:
-            sensorUsed = sensorNum
-            break
-    includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
+   
 
+    includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
+    if includeCycles:
+        sensorUsed = input("Which stack is used? (give a number)")
+        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorUsed)
+        
+        
+        
+        
+        
+        
     fig = plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Concentrations')

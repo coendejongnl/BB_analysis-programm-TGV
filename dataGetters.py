@@ -76,9 +76,9 @@ def getConductivityData(dataDir, sensorNum, filtering=True):
         errorCondition = abs(condData - ERROR_VALUE) > 0.01
         valueCondition = np.ones(shape=len(condData))
         if sensorNum in [3, 4, 5, 6]:   # Fresh sensors should never read above 50
-            valueCondition = (condData < 60)
+            valueCondition = np.logical_and(np.logical_and(condData < 60,np.abs(condData-10) > 0.3), np.abs(condData-8) > 0.2)
         else:      # Salt sensors should never read below 30
-            valueCondition = (condData > 30)
+            valueCondition =np.logical_and(condData > 30 , np.abs(condData-10) > 0.3)
 
 #        # Clean the data as long as either condition isn't satisfied
 #        while not np.all(errorCondition) or not np.all(valueCondition):
@@ -98,7 +98,7 @@ def getConductivityData(dataDir, sensorNum, filtering=True):
         condData=np.ma.masked_array(condData,np.logical_or(~errorCondition, ~valueCondition))
         print("step made")
             
-#        condData = savgol_filter(condData, 11, 5)
+#        condData = savgol_filter(condData, 21, 5)
     return condData
 
 

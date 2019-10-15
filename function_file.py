@@ -12,21 +12,25 @@ from cycler import cycler #used to cycle through styles
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy.signal import savgol_filter
 
 #
 
-colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple', 'tab:brown',
-      'tab:pink', 'tab:gray', 'tab:olive', 'tab:olive', 'indigo', 'navy', 'tan', 'black',
+colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:pink', 'tab:purple', 'tab:brown',
+       'tab:gray', 'tab:olive',   'navy', 'tan', 'black',
       'lightgreen', 'lightcoral', 'cadetblue']
 cc = cycler(linestyle=[ '--', '-.',':','-']) * (cycler(color=colors))     
 
 plt.rc('axes', prop_cycle=cc)
+
 
 # grid on for all plots
 plt.rcParams['axes.grid'] = True
 #transparancy plots 
 alpha1=0.8  
 alpha2=1
+
+
 
 def makeCombinedPlots():
     def plotSensor(sensorNum):
@@ -119,9 +123,9 @@ def makeCombinedPlots():
                 print('Cycle {} not found for charging'.format(i))
                 continue
             color = colors[i % len(colors)]
-            currentChargingPlot.plot(chargeTime, supplyCurrentC[i - 1], label='Cycle {}'.format(i), color=color, alpha=alpha1)
-            voltageChargingPlot.plot(chargeTime, supplyVoltageC[i - 1], label='Cycle {}'.format(i), color=color, alpha=alpha1)
-            powerChargingPlot.plot(chargeTime, supplyPowerC[i - 1], label='Cycle {}'.format(i), color=color, alpha=alpha1)
+            currentChargingPlot.plot(chargeTime, supplyCurrentC[i - 1], label='Cycle {}'.format(i), alpha=alpha1)
+            voltageChargingPlot.plot(chargeTime, supplyVoltageC[i - 1], label='Cycle {}'.format(i), alpha=alpha1)
+            powerChargingPlot.plot(chargeTime, supplyPowerC[i - 1], label='Cycle {}'.format(i),  alpha=alpha1)
         for j in cycles:
             try:
                 dischargeTime = np.arange(0, len(loadCurrentD[j - 1]))
@@ -129,9 +133,9 @@ def makeCombinedPlots():
                 print('Cycle {} not found for discharging'.format(j))
                 continue
             color = colors[j % len(colors)]
-            currentDischargingPlot.plot(dischargeTime, loadCurrentD[j - 1], label='Cycle {}'.format(j), color=color, alpha=alpha1)
-            voltageDischargingPlot.plot(dischargeTime, loadVoltageD[j - 1], label='Cycle {}'.format(j), color=color, alpha=alpha1)
-            powerDischargingPlot.plot(dischargeTime, loadPowerD[j - 1], label='Cycle {}'.format(j), color=color, alpha=alpha1)
+            currentDischargingPlot.plot(dischargeTime, loadCurrentD[j - 1], label='Cycle {}'.format(j),  alpha=alpha1)
+            voltageDischargingPlot.plot(dischargeTime, loadVoltageD[j - 1], label='Cycle {}'.format(j),  alpha=alpha1)
+            powerDischargingPlot.plot(dischargeTime, loadPowerD[j - 1], label='Cycle {}'.format(j),  alpha=alpha1)
         for plot in [currentChargingPlot, voltageChargingPlot, powerChargingPlot, currentDischargingPlot,
                      voltageDischargingPlot, powerDischargingPlot]:
             plot.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
@@ -166,17 +170,18 @@ def makeCombinedPlots():
 
 # Plot the values of each level sensor
 def makeLevelPlots():
-    sensorUsed =int(input("Which stack is used? (give a number)"))
-    sensorNum =sensorUsed
     
-    chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
-    if chargeCycles and dischargeCycles:
-        sensorUsed = sensorNum
             
     
 
     # Option to shade the background with charging / discharging regions
-    includeCycles = input('Include Cycles in Background? (y/n)') in 'yY'
+    includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
+    if includeCycles:
+        sensorUsed =int(input("Which stack is used? (give a number)\n"))
+        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorUsed)
+
+        
+        
     levels = [getters.getLevelData(dataDir, i) for i in range(1, 5)]
     for i in range(len(levels)):                    # Since this data is not necessarily the same size, pad with zeros or slice
         if len(levels[i]) > len(levels[0]):
@@ -190,6 +195,10 @@ def makeLevelPlots():
 
     fig = plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+    
+  
+    
+    
     fig.suptitle('Water Levels')
     for i, level in enumerate(levels, 1):
         title = 'Level Sensor {}'.format(i)
@@ -205,15 +214,19 @@ def makeLevelPlots():
         if includeCycles:
             dataReader.colorPlotCycles(dataDir, sensorUsed)  # Color the background with cycle status for extra info
 
+
+
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
+    plt.show()  
+
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)    
+    window1 =fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     
-#    window =fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-#    
 #    window1=window
-#    window1.x1=window1.x1/2
-#    window1.y1=window1.y1/3
-#    fig.savefig(str(dataDir+"figures/waterlevel1.png"),bbox_inches=window1.expanded(1.05,1.05))
+    window1.x1=window1.x1/2
+    window1.y0=window1.y1*2/3
+    fig.savefig(str(dataDir+"figures/waterlevel1.png"),bbox_inches=window1.expanded(1.05,1.05))
 #    
 #    window2=window
 #    window2.x0=window2.x1/2
@@ -238,7 +251,6 @@ def makeLevelPlots():
 #    window5.y0=window.y1*2/3
 #    window5.y1=window.y1
 #    fig.savefig(str(dataDir+"figures/waterlevel5.png"),bbox_inches=window5.expanded(1.05,1.05))
-    plt.show()
 
 # Displays six plots of the conductivities, one for each sensor
 def makeConductivityPlots():
@@ -277,10 +289,19 @@ def makeConductivityPlots():
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Conductivity Data')
     for i, cond in enumerate(conductivities, 1):
-        fig.add_subplot(3, 1, int(np.around(i/2+0.5,decimals=1)))
+        if i==6 or i==3:
+            fig.add_subplot(3, 2, 4)
+            plt.title('Conducitivity Sensor %s & %s' % (str(3),str(6)))
+
+            
+        if i==4 or i==5:
+            fig.add_subplot(3, 2, 6)
+            plt.title('Conducitivity Sensor %s & %s' % (str(4),str(5)))
+        if i==1 or i==2:
+            fig.add_subplot(3, 2, 2)
+            plt.title('Conducitivity Sensor %s & %s' % (str(1),str(2)))
+
         plt.plot(cond,ls=":",alpha=alpha2)
-        if i%2==1:
-            plt.title('Conducitivity Sensor %s & %s' % (str(i),str(i+1)))
         plt.xlabel('Time (s)')
         plt.ylabel('Conductivity ($\\frac{mS}{cm}$)')
         if includeCycles and i%2==0:
@@ -424,6 +445,9 @@ def makeIVCurves():
     makePlot(dataDir, sensorNum)
 
 
+
+
+
 # Make plots with the output from each flow sensor
 def makeFlowPlots():
     
@@ -441,12 +465,17 @@ def makeFlowPlots():
         
         
     flows = np.array([getters.getFlowData(dataDir, i) for i in range(1, 3)])
+    for i in range(len(flows)):
+        flows[i]= savgol_filter(flows[i], 1001, 3)
+
     fig = plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Flow Rate')
+    titles=["Salt stream","Fresh stream", ]
     for i, flow in enumerate(flows, 1):
-        title = 'Pump {}'.format(i)
-        fig.add_subplot(2, 1, i)
+#        title = 'Pump {}'.format(i)
+        title=titles[i-1]
+        fig.add_subplot(3, 2, int((i-1)*2+1))
         plt.plot(flow)
         plt.title(title)
         plt.xlabel('Time (s)')
@@ -469,7 +498,7 @@ def makePressurePlots():
         output = input('Output Cleaned Data to Excel? (y/n)\n')
         if output == 'y' or output == 'Y':
             fileName = input('Enter a name for the file:\n')
-            if '.xlsx' not in fileName:
+            if '.xlsx' not in fileName: 
                 fileName += '.xlsx'
             data = {'Time (s)': pd.read_csv(os.path.join(dataDir, 'CT01_CONDUCTIVITY.bcp'), delimiter='\t').to_numpy()[:, 0],
                     'Pressure Sensor 1 (bar)': pressures[0], 'Pressure Sensor 2 (mBar)': pressures[1], 'Pressure Sensor 3 (mBar)': pressures[2]}
@@ -487,7 +516,7 @@ def makePressurePlots():
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Pressure Levels')
     for i, pressure in enumerate(pressures, 1):
-        fig.add_subplot(3, 1, i)
+        fig.add_subplot(3, 2, int(i*2))
         plt.plot(pressure)
         plt.title('Pressure Sensor {}'.format(i))
         plt.xlabel('Time (s)')
@@ -606,9 +635,21 @@ def makeConcentrationPlot():
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Concentrations')
     for i, conc in enumerate(concentrations, 1):
-        fig.add_subplot(3, 1,int(np.round(i/2+0.5,decimals=1)))
-        if i%2==1: 
-            plt.title('Conductivity Sensor %s & %s' % (str(i),str(i+1)))
+        if i==6:
+            fig.add_subplot(3, 2,4)
+            plt.title('Conductivity Sensor %s & %s' % (str(3),str(6)))
+
+        if i==4:
+            fig.add_subplot(3, 2,6)
+            plt.title('Conductivity Sensor %s & %s' % (str(4),str(5)))
+        if i==1:
+            fig.add_subplot(3, 2,2)
+            plt.title('Conductivity Sensor %s & %s' % (str(1),str(2)))
+
+        else:
+            fig.add_subplot(3, 2,int(2*np.round(i/2+0.5,decimals=1)))
+#        if i%2==1: 
+#            plt.title('Conductivity Sensor %s & %s' % (str(i),str(i+1)))
         plt.plot(conc, ls=":")
         plt.xlabel('Time (s)')
         plt.ylabel('Concentration (mol/L)')

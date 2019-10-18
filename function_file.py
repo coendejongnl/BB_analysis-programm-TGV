@@ -717,6 +717,67 @@ def viewParams():
 
         calc.setParams(newArea, newVolume, usedLoadListInts, writeCSV=True)
 
+def power_plot_cycles():
+    
+    
+    while True:
+        sensorNum = input('Enter stack number (select from {})\n'.format(calc.usedStacks))
+        if sensorNum == 'q':
+            return
+        try:
+            sensorNum = int(sensorNum)
+            if sensorNum not in calc.usedStacks:
+                raise AttributeError
+            break
+        except ValueError:
+            print('{} is not in a valid format.  Please enter an integer'.format(sensorNum))
+        except AttributeError:
+            print('{} is not a valid stack number.  Please enter a value in {}'.format(calc.usedStacks, sensorNum))
+            
+            
+    supplyPowerC, supplyPowerD = dataReader.getSegmentedSupplyPower(dataDir, sensorNum)
+    loadPowerC, loadPowerD = dataReader.getSegmentedLoadPower(dataDir, sensorNum)
+    chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
+
+    totalCycles = np.min([chargeCycles, dischargeCycles])
+    
+    
+    
+    if (totalCycles == 0):     
+        print('Detected no cycles for stack {}. Please select an active stack'.format(sensorNum))
+        exit()
+    Nplots=np.ceil(totalCycles/5) #number of plots
+    
+    
+    fig=plt.figure()
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+    
+    
+    for i in range(int(Nplots)):
+        subfigure=fig.add_subplot(3,2,i+1)
+        
+        if i+1==int(np.max(Nplots)):
+            cycleList=range(i*5,totalCycles)
+        else:
+            cycleList=range(i*5,(i+1)*5)
+        print(cycleList)
+ 
+        power_cycle=np.array([])     
+        
+        for j in cycleList:
+            power_cycle=np.append(power_cycle,supplyPowerC[j])
+            power_cycle=np.append(power_cycle,-loadPowerD[j])
+            
+        subfigure.plot(power_cycle,label="cycle {} - {}".format(str(np.min(cycleList)),str(np.max(cycleList))))
+        plt.title("cycle {} - {}".format(str(np.min(cycleList)+1),str(np.max(cycleList)+1)))
+#        plt.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
+        plt.ylabel("power (W)")
+        plt.xlabel("time(s)")
+    mng = plt.get_current_fig_manager()
+    mng.full_screen_toggle()
+    plt.show()
+            
+    return()
 
 # Loads the stored values for membrane area and volume from the CSV
 def loadParams():
@@ -743,6 +804,7 @@ def menu():
         '8': makeEfficiencies,
         '9': makeIVCurves,
         '10': makeCurrentPlot,
+        "11": power_plot_cycles,
         'd': importFiles,
         'p': viewParams,
         'q': sys.exit
@@ -771,6 +833,7 @@ def optionDisplay():
     print('8 -> Show Efficiencies')
     print('9 -> Make IV-Curves')
     print('10 -> View Supply and Load Currents for Cycle Detection')
+    print('11 -> View power cycles in sets of 5')
     print('-----------------------------------')
     print('d -> Import New Data')
     print('p -> View Current Parameters')

@@ -220,13 +220,13 @@ def makeLevelPlots():
     mng.full_screen_toggle()
     plt.show()  
 
-    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)    
-    window1 =fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-    
-#    window1=window
-    window1.x1=window1.x1/2
-    window1.y0=window1.y1*2/3
-    fig.savefig(str(dataDir+"figures/waterlevel1.png"),bbox_inches=window1.expanded(1.05,1.05))
+#    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)    
+#    window1 =fig.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+#    
+##    window1=window
+#    window1.x1=window1.x1/2
+#    window1.y0=window1.y1*2/3
+#    fig.savefig(str(dataDir+"data_analysis/waterlevel1.png"),bbox_inches=window1.expanded(1.05,1.05))
 #    
 #    window2=window
 #    window2.x0=window2.x1/2
@@ -301,7 +301,7 @@ def makeConductivityPlots():
             fig.add_subplot(3, 2, 2)
             plt.title('Conducitivity Sensor %s & %s' % (str(1),str(2)))
 
-        plt.plot(cond,ls=":",alpha=alpha2)
+        plt.plot(cond,ls="-.",alpha=alpha2)
         plt.xlabel('Time (s)')
         plt.ylabel('Conductivity ($\\frac{mS}{cm}$)')
         if includeCycles and i%2==0:
@@ -383,18 +383,40 @@ def makeEfficiencies():
         fig.suptitle('Load / Supply {} Efficiencies'.format(sensorNum))
         fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
 
-        fig.add_subplot(2, 1, 1)
-        plt.title('Roundtrip Efficiency')
-        plt.plot(df['Cycle Number'].values, df['Roundtrip Efficiency'].values, 'o')
-        plt.xlabel('Cycle')
+        fig1=fig.add_subplot(3, 2, 1)
+#        plt.title('Efficiencies')
+        
+        
+        
+        plt.xlabel('number of cycles')
         plt.ylabel('Efficiency')
+        
+        
+        plt.plot(df['Cycle Number'].values, df['Voltage Efficiency'].values, 'P',label="VE")
+        plt.plot(df['Cycle Number'].values, df['Roundtrip Efficiency'].values, 'o',label="RTE")
 
-        fig.add_subplot(2, 1, 2)
-        plt.title('Coulombic Efficiency')
-        plt.plot(df['Cycle Number'].values, df['Coulombic Efficiency'].values, 'o')
-        plt.xlabel('Cycle')
-        plt.ylabel('Efficiency')
+        plt.plot(df['Cycle Number'].values, df['Coulombic Efficiency'].values, 'v',label="CE")
+        fig1.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
+        
+        fig2=fig.add_subplot(3, 2, 3)
+        plt.xlabel('number of cycles')
+        plt.xlabel('number of cycles')
 
+
+
+        fig2.plot(df['Cycle Number'].values, df['Discharge Power Density (Wm^-2)'].values, 'P')
+        fig2.set_ylabel(r'Discharge Power Density $\frac{W}{m^2}$')
+        for tl in fig2.get_yticklabels():
+            tl.set_color('tab:blue')
+        
+        fig22 = fig2.twinx()
+        fig22.plot(df['Cycle Number'].values, df['Energy Density (kWh / m^3)'].values, 'o',color="r")
+#        fig22.legend(bbox_to_anchor=(1.04,0.5), loc="center right", borderaxespad=0)
+        fig22.set_ylabel(r'Energy Density $\frac{kWh}{ m^3}$')
+        fig22.grid(linestyle='dotted')
+        for tl in fig22.get_yticklabels():
+            tl.set_color('r')
+                                  
         mng = plt.get_current_fig_manager()
         mng.full_screen_toggle()
         plt.show()
@@ -635,21 +657,19 @@ def makeConcentrationPlot():
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     fig.suptitle('Concentrations')
     for i, conc in enumerate(concentrations, 1):
-        if i==6:
+        if i==6 or i==3:
             fig.add_subplot(3, 2,4)
             plt.title('Conductivity Sensor %s & %s' % (str(3),str(6)))
 
-        if i==4:
+        if i==4 or i==5:
             fig.add_subplot(3, 2,6)
             plt.title('Conductivity Sensor %s & %s' % (str(4),str(5)))
-        if i==1:
+        if i==1 or i==2:
             fig.add_subplot(3, 2,2)
             plt.title('Conductivity Sensor %s & %s' % (str(1),str(2)))
 
-        else:
-            fig.add_subplot(3, 2,int(2*np.round(i/2+0.5,decimals=1)))
-#        if i%2==1: 
-#            plt.title('Conductivity Sensor %s & %s' % (str(i),str(i+1)))
+        
+
         plt.plot(conc, ls=":")
         plt.xlabel('Time (s)')
         plt.ylabel('Concentration (mol/L)')

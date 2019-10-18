@@ -26,7 +26,6 @@ from function_file import  *
 dataDir = ''    # This global variable will store the path to the folder 
 
 
-
 if __name__ == '__main__':
     loadParams()
     dataDir=importFiles()

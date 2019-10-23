@@ -98,7 +98,7 @@ def getConductivityData(dataDir, sensorNum, filtering=True):
         condData=np.ma.masked_array(condData,np.logical_or(~errorCondition, ~valueCondition))
         print("step made")
             
-#        condData = savgol_filter(condData, 21, 5)
+        condData = savgol_filter(condData, 31, 1)
     return condData
 
 

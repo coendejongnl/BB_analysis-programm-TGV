@@ -30,6 +30,7 @@ plt.rcParams['axes.grid'] = True
 alpha1=0.8  
 alpha2=1
 
+ 
 
 
 def makeCombinedPlots():
@@ -769,6 +770,7 @@ def power_plot_cycles():
             power_cycle=np.append(power_cycle,-loadPowerD[j])
             
         subfigure.plot(power_cycle,label="cycle {} - {}".format(str(np.min(cycleList)),str(np.max(cycleList))))
+        plt.fill_between(np.arange(len(power_cycle)),power_cycle,"b")
         plt.title("cycle {} - {}".format(str(np.min(cycleList)+1),str(np.max(cycleList)+1)))
 #        plt.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
         plt.ylabel("power (W)")
@@ -776,8 +778,83 @@ def power_plot_cycles():
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
     plt.show()
-            
-    return()
+    
+
+def Gibbs(volume,concentration,T=293,v=2):
+    m=concentration #about the same
+    R=8.314 #j/(k*mol)
+    kg_water=volume*0.997
+    G=kg_water*v*m*R*T*np.log(m)
+    G=G/(60*60*1000)
+    return(G)
+    
+def free_energy_Gibbs():
+    
+    includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
+    if includeCycles:
+        sensorUsed =int(input("Which stack is used? (give a number)\n"))
+        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorUsed)
+    
+    
+    def add_different_length(a,b):
+        C=np.add(a[0:min(len(a),len(b))],b[0:min(len(a),len(b))])
+        return(C)
+    
+    
+    filterData=True
+    ## waterlevels only 1 - 3 are important
+    levels = [getters.getLevelData(dataDir, i) for i in range(1, 5)]
+    ## conductivity
+    conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
+    
+    G1=Gibbs(levels[0][0:min(len(levels[0]),len(conductivities[0]))],conductivities[0][0:min(len(levels[0]),len(conductivities[0]))])     
+    print("1")
+    G2=Gibbs(levels[0][0:min(len(levels[0]),len(conductivities[1]))],conductivities[1][0:min(len(levels[0]),len(conductivities[1]))])
+    print("2")
+
+    G3=Gibbs(levels[1][0:min(len(levels[1]),len(conductivities[2]))],conductivities[2][0:min(len(levels[1]),len(conductivities[2]))]) 
+    print("3")
+    G4=Gibbs(levels[1][0:min(len(levels[1]),len(conductivities[5]))],conductivities[5][0:min(len(levels[1]),len(conductivities[5]))])  
+    print("4")
+    G5=Gibbs(levels[2][0:min(len(levels[2]),len(conductivities[3]))],conductivities[3][0:min(len(levels[2]),len(conductivities[3]))]) 
+    print("5")
+    G6=Gibbs(levels[2][0:min(len(levels[2]),len(conductivities[4]))],conductivities[4][0:min(len(levels[2]),len(conductivities[4]))])  
+    print("done")       
+    
+    Gibbs_total=add_different_length(G1,G2)
+    Gibbs_total=add_different_length(Gibbs_total,G3)
+    Gibbs_total=add_different_length(Gibbs_total,G4)
+    Gibbs_total=add_different_length(Gibbs_total,G5)
+    Gibbs_total=add_different_length(Gibbs_total,G6)
+       
+
+    fig=plt.figure()
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+    plt.subplot(2,1,1)
+    plt.plot(G1)
+    plt.plot(G2)
+    plt.plot(G3)
+    plt.plot(G4)
+    plt.plot(G5)
+    plt.plot(G6)
+    if includeCycles:
+        dataReader.colorPlotCycles(dataDir, sensorUsed)
+    plt.ylabel("KWH")
+    plt.xlabel("time(s)")
+    
+    plt.subplot(2,1,2)
+    plt.plot(Gibbs_total)
+    plt.ylabel("KWH")
+    plt.xlabel("time(s)")
+    
+    if includeCycles:
+        dataReader.colorPlotCycles(dataDir, sensorUsed)
+
+    mng = plt.get_current_fig_manager()
+    mng.full_screen_toggle()
+    plt.show()
+    
+
 
 # Loads the stored values for membrane area and volume from the CSV
 def loadParams():
@@ -805,6 +882,7 @@ def menu():
         '9': makeIVCurves,
         '10': makeCurrentPlot,
         "11": power_plot_cycles,
+        "12":free_energy_Gibbs,
         'd': importFiles,
         'p': viewParams,
         'q': sys.exit
@@ -834,6 +912,7 @@ def optionDisplay():
     print('9 -> Make IV-Curves')
     print('10 -> View Supply and Load Currents for Cycle Detection')
     print('11 -> View power cycles in sets of 5')
+    print("12 -> free energy efficiencies")
     print('-----------------------------------')
     print('d -> Import New Data')
     print('p -> View Current Parameters')

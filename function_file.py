@@ -4,6 +4,8 @@ import calculations as calc
 import dataGetters as getters
 import dataReader
 import pathlib
+from datetime import datetime
+
 
 import os
 import sys
@@ -14,6 +16,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.signal import savgol_filter
 
+
+#LC=None
+#SC=None
 #
 
 colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:pink', 'tab:purple', 'tab:brown',
@@ -30,6 +35,20 @@ plt.rcParams['axes.grid'] = True
 alpha1=0.8  
 alpha2=1
 
+
+def save_to_excel(df,name,dataDir,sensorNum):
+    
+    
+    
+        while True:
+            try:
+                df.to_excel(str(dataDir)+"data_analysis/"+str(name)+"{}.xlsx".format(sensorNum), sheet_name=str(name)+'_sensor_{}'.format(sensorNum), index=False)
+                break
+            except PermissionError:
+                print('Attempting to Overwrite an Open Excel Workbook.\nPlease Close the Workbook or Change the Name of the Destination File')
+                fileName = input('Input new file name\n')
+                if '.xlsx' not in fileName:     # Forgive our poor user for not including the proper file extension
+                    fileName += '.xlsx'
  
 
 
@@ -370,15 +389,16 @@ def makeEfficiencies():
             print('{}\n{}\n'.format(col, df[col].to_string(index=False)))
 
         if save:
-            while True:
-                try:
-                    df.to_excel(str(dataDir)+"data_analysis/Load + Supply {}.xlsx".format(sensorNum), sheet_name='Load + Supply {}'.format(sensorNum), index=False)
-                    break
-                except PermissionError:
-                    print('Attempting to Overwrite an Open Excel Workbook.\nPlease Close the Workbook or Change the Name of the Destination File')
-                    fileName = input('Input new file name\n')
-                    if '.xlsx' not in fileName:     # Forgive our poor user for not including the proper file extension
-                        fileName += '.xlsx'
+            save_to_excel(df,"Load + Supply",dataDir,sensorNum)
+#            while True:
+#                try:
+#                    df.to_excel(str(dataDir)+"data_analysis/Load + Supply {}.xlsx".format(sensorNum), sheet_name='Load + Supply {}'.format(sensorNum), index=False)
+#                    break
+#                except PermissionError:
+#                    print('Attempting to Overwrite an Open Excel Workbook.\nPlease Close the Workbook or Change the Name of the Destination File')
+#                    fileName = input('Input new file name\n')
+#                    if '.xlsx' not in fileName:     # Forgive our poor user for not including the proper file extension
+#                        fileName += '.xlsx'
 
         fig = plt.figure()
         fig.suptitle('Load / Supply {} Efficiencies'.format(sensorNum))
@@ -625,9 +645,9 @@ def makeCurrentPlot():
 def makeConcentrationPlot():
     filterData = input('Filter Data (y/n)\n') in 'yY'
     conductivities = [getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)]     # Conductivity in mS / cm
-    temps = [getters.getTemperatureData(dataDir, i, filtering=filterData) for i in range(1, 7)]
-    concentrations = [calc.getConcentration(conductivities[i][0:int(np.minimum(len(conductivities[i]),len(temps[i])))], temps[i][0:int(np.minimum(len(conductivities[i]),len(temps[i])))]) for i in range(len(conductivities))]               # Concentration in mols / L
-
+#    temps = [getters.getTemperatureData(dataDir, i, filtering=filterData) for i in range(1, 7)]
+#    concentrations = [calc.getConcentration(conductivities[i][0:int(np.minimum(len(conductivities[i]),len(temps[i])))], temps[i][0:int(np.minimum(len(conductivities[i]),len(temps[i])))]) for i in range(len(conductivities))]               # Concentration in mols / L
+    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*293.15) for i in range(len(conductivities))]    
     if filterData:
         output = input('Output Cleaned Concentration Data to Excel? (y/n)\n')
         if output == 'y' or output == 'Y':
@@ -676,6 +696,26 @@ def makeConcentrationPlot():
         plt.ylabel('Concentration (mol/L)')
         if includeCycles and i%2==0:
             dataReader.colorPlotCycles(dataDir, sensorUsed)
+            
+            
+    for i, cond in enumerate(conductivities, 1):
+        if i==6 or i==3:
+            fig.add_subplot(3, 2, 3)
+            plt.title('Conducitivity Sensor %s & %s' % (str(3),str(6)))
+
+            
+        if i==4 or i==5:
+            fig.add_subplot(3, 2, 5)
+            plt.title('Conducitivity Sensor %s & %s' % (str(4),str(5)))
+        if i==1 or i==2:
+            fig.add_subplot(3, 2, 1)
+            plt.title('Conducitivity Sensor %s & %s' % (str(1),str(2)))
+
+        plt.plot(cond,ls="-.",alpha=alpha2)
+        plt.xlabel('Time (s)')
+        plt.ylabel('Conductivity ($\\frac{mS}{cm}$)')
+        if includeCycles and i%2==0:
+            dataReader.colorPlotCycles(dataDir, sensorUsed)  # Color the background
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
     plt.show()
@@ -790,10 +830,11 @@ def Gibbs(volume,concentration,T=293,v=2):
     
 def free_energy_Gibbs():
     
-    includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
+#    includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
+    includeCycles=True
     if includeCycles:
         sensorUsed =int(input("Which stack is used? (give a number)\n"))
-        chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorUsed)
+        chargeCycles, dischargeCycles,cb,db = dataReader.getCycles1(dataDir, sensorUsed)
     
     
     def add_different_length(a,b):
@@ -812,13 +853,13 @@ def free_energy_Gibbs():
     G2=Gibbs(levels[0][0:min(len(levels[0]),len(conductivities[1]))],conductivities[1][0:min(len(levels[0]),len(conductivities[1]))])
     print("2")
 
-    G3=Gibbs(levels[1][0:min(len(levels[1]),len(conductivities[2]))],conductivities[2][0:min(len(levels[1]),len(conductivities[2]))]) 
+    G3=Gibbs(levels[1][0:min(len(levels[1]),len(conductivities[4]))],conductivities[4][0:min(len(levels[1]),len(conductivities[4]))]) 
     print("3")
-    G4=Gibbs(levels[1][0:min(len(levels[1]),len(conductivities[5]))],conductivities[5][0:min(len(levels[1]),len(conductivities[5]))])  
+    G4=Gibbs(levels[1][0:min(len(levels[1]),len(conductivities[3]))],conductivities[3][0:min(len(levels[1]),len(conductivities[3]))])  
     print("4")
-    G5=Gibbs(levels[2][0:min(len(levels[2]),len(conductivities[3]))],conductivities[3][0:min(len(levels[2]),len(conductivities[3]))]) 
+    G5=Gibbs(levels[2][0:min(len(levels[2]),len(conductivities[2]))],conductivities[2][0:min(len(levels[2]),len(conductivities[2]))]) 
     print("5")
-    G6=Gibbs(levels[2][0:min(len(levels[2]),len(conductivities[4]))],conductivities[4][0:min(len(levels[2]),len(conductivities[4]))])  
+    G6=Gibbs(levels[2][0:min(len(levels[2]),len(conductivities[5]))],conductivities[5][0:min(len(levels[2]),len(conductivities[5]))])  
     print("done")       
     
     Gibbs_total=add_different_length(G1,G2)
@@ -826,7 +867,65 @@ def free_energy_Gibbs():
     Gibbs_total=add_different_length(Gibbs_total,G4)
     Gibbs_total=add_different_length(Gibbs_total,G5)
     Gibbs_total=add_different_length(Gibbs_total,G6)
+    
+    
+    #### loading data used to obtain Energy from load and supply
+    sensorNum=sensorUsed
+    LP=getters.getLoadPowerData(dataDir, sensorNum)
+    SP=getters.getSupplyPowerData(dataDir, sensorNum)
+    
        
+    #### now we use the boundaries cb and db:
+    
+    def delta_gibbs(Gibbs_total,bounds,window=5):
+        
+        delta_g=np.mean(Gibbs_total[np.arange(bounds[1]-window,bounds[1])])-np.mean(Gibbs_total[np.arange(bounds[0]-window,bounds[0])])
+        return(delta_g)
+        
+    arraydatacharge=np.array([])
+    arraydatadischarge=np.array([])
+    
+    CPsum=np.array([])
+    DPsum=np.array([])
+
+
+    for i in range(int(cb.shape[0])):
+        try:
+            CPsum=np.append(CPsum,np.sum(SP[range(cb[i,0],cb[i,1])]))
+            DPsum=np.append(DPsum,np.sum(LP[range(db[i,0],db[i,1])]))
+            
+            arraydatacharge=np.append(arraydatacharge,delta_gibbs(Gibbs_total,cb[i,:],window=5))
+            arraydatadischarge=np.append(arraydatadischarge,delta_gibbs(Gibbs_total,db[i,:],window=5))
+            
+
+        except:
+            print("one of summations didnt work")
+    
+    
+    CPsum=CPsum/(60*60*1000)  
+    DPsum=DPsum/(60*60*1000)
+    
+    
+    
+    
+    
+    
+    ### storing the data in an dictionary and storing it in a DataFrame:
+    
+#    data={"charging gibbs":arraydatacharge,
+#          "charging energy SP":CPsum,
+##          "ratio charging":arraydatacharge/CPsum,
+#          "discharging gibbs":arraydatadischarge,
+#          "disharging energy LD": DPsum,
+##          "ratio discharging":DPsum/arraydatadischarge        
+#              }
+#        
+#    df=pd.DataFrame(data)
+#        
+#    print(df)
+    
+    
+    #### plotting all the data
 
     fig=plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
@@ -854,7 +953,195 @@ def free_energy_Gibbs():
     mng.full_screen_toggle()
     plt.show()
     
+def total_PCV_plot():
+    
+    while True:
+        sensorNum = input('Enter stack number (select from {})\n'.format(calc.usedStacks))
+        if sensorNum == 'q':
+            return
+        try:
+            sensorNum = int(sensorNum)
+            if sensorNum not in calc.usedStacks:
+                raise AttributeError
+            break
+        except ValueError:
+            print('{} is not in a valid format.  Please enter an integer'.format(sensorNum))
+        except AttributeError:
+            print('{} is not a valid stack number.  Please enter a value in {}'.format(calc.usedStacks, sensorNum))
+    
+    includeCycles=input("include background charging/discharging? y/Y\n") in "yY"
+#            
+#            
+#    SVC, SVD = dataReader.getSegmentedSupplyVoltage(dataDir, sensorNum)
+#    LVC, LVD = dataReader.getSegmentedLoadVoltage(dataDir, sensorNum)
+#    SIC, SID = dataReader.getSegmentedSupplyCurrent(dataDir, sensorNum)
+#    LIC, LID = dataReader.getSegmentedLoadCurrent(dataDir, sensorNum)
+#    chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
+#
+#    totalCycles = np.min([chargeCycles, dischargeCycles])
+#    
+#    
+#    
+#    if (totalCycles == 0):     
+#        print('Detected no cycles for stack {}. Please select an active stack'.format(sensorNum))
+#        exit()
+#        
+#    cyclesV=np.array([]) 
+#    cyclesI=np.array([])     
+#    
+#        
+#    for j in range(int(totalCycles)): 
+#        
+#        cyclesV=np.append(cyclesV,SVC[j])
+#        cyclesV=np.append(cyclesV,-LVD[j])
+#        
+#        cyclesI=np.append(cyclesI,SIC[j])
+#        cyclesI=np.append(cyclesI,LID[j])
+#        
+#    Resistance=
+            
+    LV=getters.getLoadVoltageData(dataDir, sensorNum)
+    SV=getters.getSupplyVoltageData(dataDir, sensorNum)
+    
+#    global LC,SC
+    LC=getters.getLoadCurrentData(dataDir, sensorNum)
+    SC=getters.getSupplyCurrentData(dataDir, sensorNum)
+    
+    LP=getters.getLoadPowerData(dataDir, sensorNum)
+    SP=getters.getSupplyPowerData(dataDir, sensorNum)
+    
 
+    
+
+    
+    
+    fig=plt.figure()
+    plt.subplot(3,2,1)
+
+    if includeCycles:
+        dataReader.colorPlotCycles(dataDir, sensorNum)    
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+    
+    plt.fill_between(np.arange(len(LV)),-LV,label= "load",color="blue",ls="-")
+    plt.fill_between(np.arange(len(SV)),SV,label="supply",color="red", ls="-")
+    plt.legend() 
+    
+    plt.subplot(3,2,3)
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+    if includeCycles:
+        dataReader.colorPlotCycles(dataDir, sensorNum) 
+    plt.fill_between(np.arange(len(LC)),-LC,label= "load",color="blue",ls="-")
+    plt.fill_between(np.arange(len(SC)),SC,label="supply",color="red", ls="-")
+    
+    plt.subplot(3,2,5)
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+    if includeCycles:
+        dataReader.colorPlotCycles(dataDir, sensorNum) 
+    
+    plt.fill_between(np.arange(len(LP)),-LP,label= "load",color="blue",ls="-")
+    plt.fill_between(np.arange(len(SP)),SP,label="supply",color="red", ls="-")
+    mng = plt.get_current_fig_manager()
+    mng.full_screen_toggle()
+    plt.show()
+
+
+def resistance():
+    
+    #################
+    #This function is created to determine the total resistance
+    #################
+    
+    
+    ## give inputs of all the important data
+    
+    while True:
+        sensorNum = input('Enter stack number (select from {})\n'.format(calc.usedStacks))
+        if sensorNum == 'q':
+            return
+        try:
+            sensorNum = int(sensorNum)
+            if sensorNum not in calc.usedStacks:
+                raise AttributeError
+            break
+        except ValueError:
+            print('{} is not in a valid format.  Please enter an integer'.format(sensorNum))
+        except AttributeError:
+            print('{} is not a valid stack number.  Please enter a value in {}'.format(calc.usedStacks, sensorNum))
+    
+    
+    
+    ## loading data
+    
+    LV=getters.getLoadVoltageData(dataDir, sensorNum)
+    SV=getters.getSupplyVoltageData(dataDir, sensorNum)
+    
+    LC=getters.getLoadCurrentData(dataDir, sensorNum)
+    SC=getters.getSupplyCurrentData(dataDir, sensorNum)
+    
+    ## determening boundaries
+    
+    sensorUsed=sensorNum
+    includeCycles=True
+    if includeCycles:
+        chargeCycles, dischargeCycles,cb,db = dataReader.getCycles1(dataDir, sensorUsed)
+    
+    ## obtaining V_open by taking voltage before cycle begins. taking np.mean(window=100sec)
+    
+    def V_open(voltage,bound,window=100):
+        V=voltage[np.arange(bound-window,bound)]
+        V=V[V!=0]
+        V_mean=np.mean(V)
+        return(V_mean)
+    
+    V_open_c=np.array([])
+    V_open_d=np.array([])
+    
+    for i in range(int(cb.shape[0])):
+        V_open_c=np.append(V_open_c,V_open(SV,cb[i,0],window=100))
+        V_open_d=np.append(V_open_d,V_open(LV,db[i,0],window=100))
+        
+    ## determine voltage load/supply 100 seconds after charging/discharging cycle has started. with a mean function
+    def x_system(x1,y1,bound,window=100):
+        x=x1[np.arange(bound,bound+window)]
+        y=y1[np.arange(bound,bound+window)]
+    
+#        x=x[y!=0]
+        x=np.ma.masked_array(x,y==0)
+        y=np.ma.masked_array(y,y==0)
+        
+        
+        return(x)
+
+
+    V_system_c=np.array([])
+    V_system_d=np.array([])
+    I_system_c=np.array([])
+    I_system_d=np.array([])
+        
+    for i in range(int(cb.shape[0])):
+        V_system_c=np.vstack((V_system_c,x_system(SV,SC,cb[i,0],window=100)))
+        V_system_d=np.vstack((V_system_d,x_system(LV,LC,db[i,0],window=100)) ) 
+        
+        I_system_c=np.vstack((V_system_c,x_system(SC,SC,cb[i,0],window=100)))
+        I_system_d=np.vstack((V_system_d,x_system(LC,LC,db[i,0],window=100)) ) 
+        
+    ## calculating the resistance using emperical data
+    
+    Resistance_c=np.mean(np.abs((V_system_c-V_open_c)/I_system_c),axis=0)
+    Resistance_d=np.mean(np.abs((V_system_d-V_open_d)/I_system_d),axis=0)
+    
+    ## create an DataFrame
+    
+    data={"resistance C":Resistance_c,
+          "resistance D":Resistance_d          
+              }
+    
+    df=pd.DataFrame(data)
+    print(df)
+    
+    ## save to excel
+    save_to_excel(df,"resistance",dataDir,sensorNum)
+    
 
 # Loads the stored values for membrane area and volume from the CSV
 def loadParams():
@@ -883,6 +1170,8 @@ def menu():
         '10': makeCurrentPlot,
         "11": power_plot_cycles,
         "12":free_energy_Gibbs,
+        "13":total_PCV_plot,
+        "14":resistance,
         'd': importFiles,
         'p': viewParams,
         'q': sys.exit
@@ -913,6 +1202,8 @@ def optionDisplay():
     print('10 -> View Supply and Load Currents for Cycle Detection')
     print('11 -> View power cycles in sets of 5')
     print("12 -> free energy efficiencies")
+    print("13 -> total_PCV_plot")
+    print("14 -> Resistance start cycles")
     print('-----------------------------------')
     print('d -> Import New Data')
     print('p -> View Current Parameters')

@@ -177,6 +177,10 @@ def getCycles(dataDir, sensorNum):
     chargeBounds, dischargeBounds = getBounds(dataDir, sensorNum)
     return chargeBounds.shape[0], dischargeBounds.shape[0]
 
+def getCycles1(dataDir, sensorNum):
+    chargeBounds, dischargeBounds = getBounds(dataDir, sensorNum)
+    return chargeBounds.shape[0], dischargeBounds.shape[0],chargeBounds,dischargeBounds
+
 
 # Call this function when plotting any of the continuous sensors in order to include shadings in the
 # plot background indicating charging state

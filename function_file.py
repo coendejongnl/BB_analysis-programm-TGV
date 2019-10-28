@@ -1119,21 +1119,53 @@ def resistance():
     I_system_d=np.array([])
         
     for i in range(int(cb.shape[0])):
-        V_system_c=np.vstack((V_system_c,x_system(SV,SC,cb[i,0],window=100)))
-        V_system_d=np.vstack((V_system_d,x_system(LV,LC,db[i,0],window=100)) ) 
-        
-        I_system_c=np.vstack((V_system_c,x_system(SC,SC,cb[i,0],window=100)))
-        I_system_d=np.vstack((V_system_d,x_system(LC,LC,db[i,0],window=100)) ) 
-        
+        if i==0:
+            V_system_c=x_system(SV,SC,cb[i,0],window=100)
+            V_system_d=x_system(LV,LC,db[i,0],window=100)
+            
+            I_system_c=x_system(SC,SC,cb[i,0],window=100)
+            I_system_d=x_system(LC,LC,db[i,0],window=100)
+        else:
+            try:
+                I_system_c=np.vstack((I_system_c,x_system(SC,SC,cb[i,0],window=100)))
+                I_system_d=np.vstack((I_system_d,x_system(LC,LC,db[i,0],window=100)) )                 
+                V_system_c=np.vstack((V_system_c,x_system(SV,SC,cb[i,0],window=100)))
+                V_system_d=np.vstack((V_system_d,x_system(LV,LC,db[i,0],window=100)) ) 
+                
+
+            except:
+                
+                print(i)
     ## calculating the resistance using emperical data
+    print(V_system_c.shape)
+    print(V_system_d.shape)
+    print(I_system_c.shape)
+    print(I_system_d.shape)
+    print(V_open_c.shape)
+    print(V_open_d.shape)
     
-    Resistance_c=np.mean(np.abs((V_system_c-V_open_c)/I_system_c),axis=0)
-    Resistance_d=np.mean(np.abs((V_system_d-V_open_d)/I_system_d),axis=0)
+    
+    
+    Resistance_c=np.mean(np.abs((V_system_c.T-V_open_c)/I_system_c.T),axis=0)
+    Resistance_d=np.mean(np.abs((V_system_d.T-V_open_d)/I_system_d.T),axis=0)
+    Voltage_c=np.mean(V_system_c,axis=1)
+    Voltage_d=np.mean(V_system_d,axis=1)
+    Current_c=np.mean(I_system_c,axis=1)
+    Current_d=np.mean(I_system_d,axis=1)
+    open_voltage_c=V_open_c
+    open_voltage_d=V_open_d
+
     
     ## create an DataFrame
     
     data={"resistance C":Resistance_c,
-          "resistance D":Resistance_d          
+          "resistance D":Resistance_d  ,
+          "voltage C":Voltage_c,
+          "voltage d":Voltage_d,
+          "open V C": open_voltage_c,
+          "open V d": open_voltage_d, 
+          "current c":Current_c,
+          "current d":Current_d
               }
     
     df=pd.DataFrame(data)

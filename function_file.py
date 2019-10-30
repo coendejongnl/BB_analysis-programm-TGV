@@ -825,13 +825,15 @@ def Gibbs(volume,concentration,T=293,v=2):
     R=8.314 #j/(k*mol)
     kg_water=volume*0.997
     G=kg_water*v*m*R*T*np.log(m)
-    G=G/(60*60*1000)
+    
     return(G)
     
 def free_energy_Gibbs():
     
 #    includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
     includeCycles=True
+    window=int(input("give the window to average. (only integers as inputs) \n"))
+
     if includeCycles:
         sensorUsed =int(input("Which stack is used? (give a number)\n"))
         chargeCycles, dischargeCycles,cb,db = dataReader.getCycles1(dataDir, sensorUsed)
@@ -848,18 +850,22 @@ def free_energy_Gibbs():
     ## conductivity
     conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
     
-    G1=Gibbs(levels[0][0:min(len(levels[0]),len(conductivities[0]))],conductivities[0][0:min(len(levels[0]),len(conductivities[0]))])     
+    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*293.15) for i in range(len(conductivities))] 
+    
+    ## concentration
+    
+    G1=Gibbs(levels[0][0:min(len(levels[0]),len(concentrations[0]))],concentrations[0][0:min(len(levels[0]),len(concentrations[0]))])     
     print("1")
-    G2=Gibbs(levels[0][0:min(len(levels[0]),len(conductivities[1]))],conductivities[1][0:min(len(levels[0]),len(conductivities[1]))])
+    G2=Gibbs(levels[0][0:min(len(levels[0]),len(concentrations[1]))],concentrations[1][0:min(len(levels[0]),len(concentrations[1]))])
     print("2")
 
-    G3=Gibbs(levels[1][0:min(len(levels[1]),len(conductivities[4]))],conductivities[4][0:min(len(levels[1]),len(conductivities[4]))]) 
+    G3=Gibbs(levels[1][0:min(len(levels[1]),len(concentrations[4]))],concentrations[4][0:min(len(levels[1]),len(concentrations[4]))]) 
     print("3")
-    G4=Gibbs(levels[1][0:min(len(levels[1]),len(conductivities[3]))],conductivities[3][0:min(len(levels[1]),len(conductivities[3]))])  
+    G4=Gibbs(levels[1][0:min(len(levels[1]),len(concentrations[3]))],concentrations[3][0:min(len(levels[1]),len(concentrations[3]))])  
     print("4")
-    G5=Gibbs(levels[2][0:min(len(levels[2]),len(conductivities[2]))],conductivities[2][0:min(len(levels[2]),len(conductivities[2]))]) 
+    G5=Gibbs(levels[2][0:min(len(levels[2]),len(concentrations[2]))],concentrations[2][0:min(len(levels[2]),len(concentrations[2]))]) 
     print("5")
-    G6=Gibbs(levels[2][0:min(len(levels[2]),len(conductivities[5]))],conductivities[5][0:min(len(levels[2]),len(conductivities[5]))])  
+    G6=Gibbs(levels[2][0:min(len(levels[2]),len(concentrations[5]))],concentrations[5][0:min(len(levels[2]),len(concentrations[5]))])  
     print("done")       
     
     Gibbs_total=add_different_length(G1,G2)
@@ -877,9 +883,9 @@ def free_energy_Gibbs():
        
     #### now we use the boundaries cb and db:
     
-    def delta_gibbs(Gibbs_total,bounds,window=5):
+    def delta_gibbs(Gibbs_total,bounds,window=100):
         
-        delta_g=np.mean(Gibbs_total[np.arange(bounds[1]-window,bounds[1])])-np.mean(Gibbs_total[np.arange(bounds[0]-window,bounds[0])])
+        delta_g=np.mean(Gibbs_total[np.arange(bounds[1]-window,bounds[1]+window)])-np.mean(Gibbs_total[np.arange(bounds[0]-window,bounds[0]+window)])
         return(delta_g)
         
     arraydatacharge=np.array([])
@@ -893,25 +899,62 @@ def free_energy_Gibbs():
         try:
             CPsum=np.append(CPsum,np.sum(SP[range(cb[i,0],cb[i,1])]))
             DPsum=np.append(DPsum,np.sum(LP[range(db[i,0],db[i,1])]))
+        except:
+            print("error in power integral")
             
-            arraydatacharge=np.append(arraydatacharge,delta_gibbs(Gibbs_total,cb[i,:],window=5))
-            arraydatadischarge=np.append(arraydatadischarge,delta_gibbs(Gibbs_total,db[i,:],window=5))
+        try:
+            arraydatacharge=np.append(arraydatacharge,delta_gibbs(Gibbs_total,cb[i,:],window))
+            arraydatadischarge=np.append(arraydatadischarge,delta_gibbs(Gibbs_total,db[i,:],window))
             
 
         except:
-            print("one of summations didnt work")
+            print("append didn't work")
     
     
     CPsum=CPsum/(60*60*1000)  
     DPsum=DPsum/(60*60*1000)
+    arraydatacharge=arraydatacharge/(60*60*1000)
+    arraydatadischarge=arraydatadischarge/(60*60*1000)
+    
+    ## some illustrating which average he takes for the gibbs on the boundaries
+    
+    def gibbs_average_bound(total_gibbs,bounds_1D,window):
+        mean_energy=np.array([])
+        new_bound=np.array([])
+        
+        for i in bounds_1D:
+            try:
+                i=int(i)
+                mean_energy=np.append(mean_energy,np.mean(Gibbs_total[np.arange(i-window,i+window)]))
+                new_bound=np.append(new_bound,i)
+            except:
+                print("one of the arrays already stops before the end of a transition")
+        return(new_bound,mean_energy)
+            
+    bound=np.vstack((cb,db))
+    flat_bound=bound.flatten()
+    
+    x,y=gibbs_average_bound(Gibbs_total,flat_bound,window)
     
     
     
     
     
+    ratio_c=arraydatacharge[0:min(len(arraydatacharge),len(CPsum))]/CPsum[0:min(len(arraydatacharge),len(CPsum))]
+    ratio_d=DPsum[0:min(len(arraydatadischarge),len(DPsum))]/arraydatadischarge[0:min(len(arraydatadischarge),len(DPsum))]
     
     ### storing the data in an dictionary and storing it in a DataFrame:
     
+    ## test dict
+    d={"charging gibbs":arraydatacharge,
+          "charging energy SP":CPsum,
+          "ratio charging":ratio_c,
+          "discharging gibbs":arraydatadischarge,
+          "disharging energy LD": DPsum,
+          "ratio discharging":ratio_d        
+              }  
+            
+    df= pd.DataFrame.from_dict(d, orient='index')
 #    data={"charging gibbs":arraydatacharge,
 #          "charging energy SP":CPsum,
 ##          "ratio charging":arraydatacharge/CPsum,
@@ -919,30 +962,35 @@ def free_energy_Gibbs():
 #          "disharging energy LD": DPsum,
 ##          "ratio discharging":DPsum/arraydatadischarge        
 #              }
-#        
+        
 #    df=pd.DataFrame(data)
-#        
-#    print(df)
+    df=df.transpose()
+    print(df)
     
+    ## save df to excel
+    name="gibbs free energy"
+    save_to_excel(df,name,dataDir,sensorNum)
     
     #### plotting all the data
 
     fig=plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     plt.subplot(2,1,1)
-    plt.plot(G1)
-    plt.plot(G2)
-    plt.plot(G3)
-    plt.plot(G4)
-    plt.plot(G5)
-    plt.plot(G6)
+    plt.plot(G1,label="G1")
+    plt.plot(G2,label="G2")
+    plt.plot(G3,label="G3")
+    plt.plot(G4,label="G4")
+    plt.plot(G5,label="G5")
+    plt.plot(G6,label="G6")
     if includeCycles:
         dataReader.colorPlotCycles(dataDir, sensorUsed)
     plt.ylabel("KWH")
     plt.xlabel("time(s)")
-    
+    plt.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
+
     plt.subplot(2,1,2)
     plt.plot(Gibbs_total)
+    plt.scatter(x,y,c="r",marker="x",s=int(10**2))
     plt.ylabel("KWH")
     plt.xlabel("time(s)")
     
@@ -970,40 +1018,13 @@ def total_PCV_plot():
             print('{} is not a valid stack number.  Please enter a value in {}'.format(calc.usedStacks, sensorNum))
     
     includeCycles=input("include background charging/discharging? y/Y\n") in "yY"
-#            
-#            
-#    SVC, SVD = dataReader.getSegmentedSupplyVoltage(dataDir, sensorNum)
-#    LVC, LVD = dataReader.getSegmentedLoadVoltage(dataDir, sensorNum)
-#    SIC, SID = dataReader.getSegmentedSupplyCurrent(dataDir, sensorNum)
-#    LIC, LID = dataReader.getSegmentedLoadCurrent(dataDir, sensorNum)
-#    chargeCycles, dischargeCycles = dataReader.getCycles(dataDir, sensorNum)
-#
-#    totalCycles = np.min([chargeCycles, dischargeCycles])
-#    
-#    
-#    
-#    if (totalCycles == 0):     
-#        print('Detected no cycles for stack {}. Please select an active stack'.format(sensorNum))
-#        exit()
-#        
-#    cyclesV=np.array([]) 
-#    cyclesI=np.array([])     
-#    
-#        
-#    for j in range(int(totalCycles)): 
-#        
-#        cyclesV=np.append(cyclesV,SVC[j])
-#        cyclesV=np.append(cyclesV,-LVD[j])
-#        
-#        cyclesI=np.append(cyclesI,SIC[j])
-#        cyclesI=np.append(cyclesI,LID[j])
-#        
-#    Resistance=
+
+
+    ## load data
             
     LV=getters.getLoadVoltageData(dataDir, sensorNum)
     SV=getters.getSupplyVoltageData(dataDir, sensorNum)
     
-#    global LC,SC
     LC=getters.getLoadCurrentData(dataDir, sensorNum)
     SC=getters.getSupplyCurrentData(dataDir, sensorNum)
     
@@ -1013,6 +1034,7 @@ def total_PCV_plot():
 
     
 
+    ## plot everything including background
     
     
     fig=plt.figure()
@@ -1021,7 +1043,8 @@ def total_PCV_plot():
     if includeCycles:
         dataReader.colorPlotCycles(dataDir, sensorNum)    
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
-    
+    plt.xlabel("time")
+    plt.ylabel("voltage")
     plt.fill_between(np.arange(len(LV)),-LV,label= "load",color="blue",ls="-")
     plt.fill_between(np.arange(len(SV)),SV,label="supply",color="red", ls="-")
     plt.legend() 
@@ -1032,6 +1055,9 @@ def total_PCV_plot():
         dataReader.colorPlotCycles(dataDir, sensorNum) 
     plt.fill_between(np.arange(len(LC)),-LC,label= "load",color="blue",ls="-")
     plt.fill_between(np.arange(len(SC)),SC,label="supply",color="red", ls="-")
+    plt.xlabel("time")
+    plt.ylabel("current")
+    
     
     plt.subplot(3,2,5)
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
@@ -1040,6 +1066,16 @@ def total_PCV_plot():
     
     plt.fill_between(np.arange(len(LP)),-LP,label= "load",color="blue",ls="-")
     plt.fill_between(np.arange(len(SP)),SP,label="supply",color="red", ls="-")
+    
+    plt.xlabel("time")
+    plt.ylabel("power")
+    
+    ## test for open voltage plot
+#    plt.subplot(3,2,2)
+#    plt.scatter(-1*np.ones(shape=len(SV))[SC!=0],"gx")
+#    plt.scatter(np.ones(shape=len(LV))[LC!=0],"rx")
+#    plt.xlabel("time")
+#    plt.ylabel("voltage with no current")
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
     plt.show()
@@ -1053,6 +1089,7 @@ def resistance():
     
     
     ## give inputs of all the important data
+    
     
     while True:
         sensorNum = input('Enter stack number (select from {})\n'.format(calc.usedStacks))
@@ -1069,7 +1106,7 @@ def resistance():
             print('{} is not a valid stack number.  Please enter a value in {}'.format(calc.usedStacks, sensorNum))
     
     
-    
+    windows=int(input("what is the window to determine the resistance? (only integers)\n"))
     ## loading data
     
     LV=getters.getLoadVoltageData(dataDir, sensorNum)
@@ -1077,6 +1114,14 @@ def resistance():
     
     LC=getters.getLoadCurrentData(dataDir, sensorNum)
     SC=getters.getSupplyCurrentData(dataDir, sensorNum)
+    
+    filterData=True
+    ## waterlevels only 1 - 3 are important
+#    levels = [getters.getLevelData(dataDir, i) for i in range(1, 5)]
+    ## conductivity
+#    conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
+#        concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*293.15) for i in range(len(conductivities))] 
+
     
     ## determening boundaries
     
@@ -1087,7 +1132,7 @@ def resistance():
     
     ## obtaining V_open by taking voltage before cycle begins. taking np.mean(window=100sec)
     
-    def V_open(voltage,bound,window=100):
+    def V_open(voltage,bound,window=windows): 
         V=voltage[np.arange(bound-window,bound)]
         V=V[V!=0]
         V_mean=np.mean(V)
@@ -1097,13 +1142,13 @@ def resistance():
     V_open_d=np.array([])
     
     for i in range(int(cb.shape[0])):
-        V_open_c=np.append(V_open_c,V_open(SV,cb[i,0],window=100))
-        V_open_d=np.append(V_open_d,V_open(LV,db[i,0],window=100))
+        V_open_c=np.append(V_open_c,V_open(SV,cb[i,0],window=windows))
+        V_open_d=np.append(V_open_d,V_open(LV,db[i,0],window=windows))
         
     ## determine voltage load/supply 100 seconds after charging/discharging cycle has started. with a mean function
-    def x_system(x1,y1,bound,window=100):
-        x=x1[np.arange(bound,bound+window)]
-        y=y1[np.arange(bound,bound+window)]
+    def x_system(x1,y1,bound,window=windows):
+        x=x1[np.arange(bound,bound+windows)]
+        y=y1[np.arange(bound,bound+windows)]
     
 #        x=x[y!=0]
         x=np.ma.masked_array(x,y==0)
@@ -1120,23 +1165,46 @@ def resistance():
         
     for i in range(int(cb.shape[0])):
         if i==0:
-            V_system_c=x_system(SV,SC,cb[i,0],window=100)
-            V_system_d=x_system(LV,LC,db[i,0],window=100)
+            V_system_c=x_system(SV,SC,cb[i,0],window=windows)
+            V_system_d=x_system(LV,LC,db[i,0],window=windows)
             
-            I_system_c=x_system(SC,SC,cb[i,0],window=100)
-            I_system_d=x_system(LC,LC,db[i,0],window=100)
+            I_system_c=x_system(SC,SC,cb[i,0],window=windows)
+            I_system_d=x_system(LC,LC,db[i,0],window=windows)
         else:
             try:
-                I_system_c=np.vstack((I_system_c,x_system(SC,SC,cb[i,0],window=100)))
-                I_system_d=np.vstack((I_system_d,x_system(LC,LC,db[i,0],window=100)) )                 
-                V_system_c=np.vstack((V_system_c,x_system(SV,SC,cb[i,0],window=100)))
-                V_system_d=np.vstack((V_system_d,x_system(LV,LC,db[i,0],window=100)) ) 
+                I_system_c=np.vstack((I_system_c,x_system(SC,SC,cb[i,0],window=windows)))
+                I_system_d=np.vstack((I_system_d,x_system(LC,LC,db[i,0],window=windows)) )                 
+                V_system_c=np.vstack((V_system_c,x_system(SV,SC,cb[i,0],window=windows)))
+                V_system_d=np.vstack((V_system_d,x_system(LV,LC,db[i,0],window=windows)) ) 
                 
 
             except:
                 
                 print(i)
-    ## calculating the resistance using emperical data
+    ## calculating the open voltage using emperical data (concentration)
+    
+    def open_voltage_function(C_salt,C_fresh):
+        if len(C_salt)>len(C_fresh):
+            C_salt=C_salt[0:len(C_fresh)]
+        else:
+            C_fresh=C_fresh[0:len(C_salt)]
+        
+        R=8.314
+        T=293.15
+        F=96485.3329
+        
+        x=C_salt/C_fresh
+
+        E_0=R*T/F*np.log(x)
+        E_open=E_0*2*512
+        return(E_open)
+    
+    
+    V_open_c_2=open_voltage_function()
+    V_open_d_2=open_voltage_function
+    
+    ## test to check if the shapes of the arguments are correct
+    
     print(V_system_c.shape)
     print(V_system_d.shape)
     print(I_system_c.shape)

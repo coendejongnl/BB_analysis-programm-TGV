@@ -5,7 +5,7 @@ import dataGetters as getters
 import dataReader
 import pathlib
 from datetime import datetime
-
+import dill  
 
 import os
 import sys
@@ -49,8 +49,26 @@ def save_to_excel(df,name,dataDir,sensorNum):
                 fileName = input('Input new file name\n')
                 if '.xlsx' not in fileName:     # Forgive our poor user for not including the proper file extension
                     fileName += '.xlsx'
- 
-
+                    
+    
+## this function makes all the arrays in the list the same size, which is a function used a lot !!!
+def make_same_len(list_x):
+    a=[] #just to solve an error warning in python
+    for i in list_x:
+        try:
+            a=min(a,len(i))
+        except:
+            a=len(i)
+     
+    x=[]
+    for j in list_x:
+        x.append(np.array(j[0:a]))
+        
+    return(x)
+    
+    
+    
+    
 
 def makeCombinedPlots():
     def plotSensor(sensorNum):
@@ -142,7 +160,6 @@ def makeCombinedPlots():
             except IndexError:
                 print('Cycle {} not found for charging'.format(i))
                 continue
-            color = colors[i % len(colors)]
             currentChargingPlot.plot(chargeTime, supplyCurrentC[i - 1], label='Cycle {}'.format(i), alpha=alpha1)
             voltageChargingPlot.plot(chargeTime, supplyVoltageC[i - 1], label='Cycle {}'.format(i), alpha=alpha1)
             powerChargingPlot.plot(chargeTime, supplyPowerC[i - 1], label='Cycle {}'.format(i),  alpha=alpha1)
@@ -152,7 +169,6 @@ def makeCombinedPlots():
             except IndexError:
                 print('Cycle {} not found for discharging'.format(j))
                 continue
-            color = colors[j % len(colors)]
             currentDischargingPlot.plot(dischargeTime, loadCurrentD[j - 1], label='Cycle {}'.format(j),  alpha=alpha1)
             voltageDischargingPlot.plot(dischargeTime, loadVoltageD[j - 1], label='Cycle {}'.format(j),  alpha=alpha1)
             powerDischargingPlot.plot(dischargeTime, loadPowerD[j - 1], label='Cycle {}'.format(j),  alpha=alpha1)
@@ -823,9 +839,9 @@ def power_plot_cycles():
 def Gibbs(volume,concentration,T=293,v=2):
     m=concentration #about the same
     R=8.314 #j/(k*mol)
-    kg_water=volume*0.997
+    kg_water=volume*0.997*1000
     G=kg_water*v*m*R*T*np.log(m)
-    
+    G=G/(60*60*1000)
     return(G)
     
 def free_energy_Gibbs():
@@ -913,8 +929,7 @@ def free_energy_Gibbs():
     
     CPsum=CPsum/(60*60*1000)  
     DPsum=DPsum/(60*60*1000)
-    arraydatacharge=arraydatacharge/(60*60*1000)
-    arraydatadischarge=arraydatadischarge/(60*60*1000)
+
     
     ## some illustrating which average he takes for the gibbs on the boundaries
     
@@ -941,7 +956,7 @@ def free_energy_Gibbs():
     
     
     ratio_c=arraydatacharge[0:min(len(arraydatacharge),len(CPsum))]/CPsum[0:min(len(arraydatacharge),len(CPsum))]
-    ratio_d=DPsum[0:min(len(arraydatadischarge),len(DPsum))]/arraydatadischarge[0:min(len(arraydatadischarge),len(DPsum))]
+    ratio_d=(DPsum[0:min(len(arraydatadischarge),len(DPsum))]/arraydatadischarge[0:min(len(arraydatadischarge),len(DPsum))])**-1
     
     ### storing the data in an dictionary and storing it in a DataFrame:
     
@@ -1116,11 +1131,13 @@ def resistance():
     SC=getters.getSupplyCurrentData(dataDir, sensorNum)
     
     filterData=True
-    ## waterlevels only 1 - 3 are important
-#    levels = [getters.getLevelData(dataDir, i) for i in range(1, 5)]
-    ## conductivity
-#    conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
-#        concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*293.15) for i in range(len(conductivities))] 
+    
+    
+    # waterlevels only 1 - 3 are important
+    level3 = getters.getLevelData(dataDir, 3) 
+    # conductivity
+    conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
+    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*293.15) for i in range(len(conductivities))] 
 
     
     ## determening boundaries
@@ -1200,8 +1217,77 @@ def resistance():
         return(E_open)
     
     
-    V_open_c_2=open_voltage_function()
-    V_open_d_2=open_voltage_function
+    V_open_5=open_voltage_function(concentrations[1],concentrations[5])
+    V_open_3=open_voltage_function(concentrations[1],concentrations[3])
+    
+    
+
+    
+    tank3_diff=np.diff(level3)
+    
+    print(V_open_5.shape)
+    print(V_open_3.shape)
+    print(tank3_diff.shape)    
+    
+    [V_open_3,V_open_5,tank3_diff]=make_same_len([V_open_3,V_open_5,tank3_diff])
+    print(V_open_5.shape)
+    print(V_open_3.shape)
+    print(tank3_diff.shape)
+    Nernst_voltage=np.where(tank3_diff<=0,V_open_3,V_open_5)
+    
+    Nernst_voltage_c=np.array([])
+    Nernst_voltage_d=np.array([])
+
+    for i in range(int(cb.shape[0])):
+        Nernst_voltage_c=np.append(Nernst_voltage_c,np.mean(Nernst_voltage[cb[i,0]:cb[i,0]+windows]))
+        Nernst_voltage_d=np.append(Nernst_voltage_d,np.mean(Nernst_voltage[db[i,0]:db[i,0]+windows]))
+    
+    ## calculating V_open using Voltage charge and discharge process
+
+    def resistance_v_cd(LV,SV,LC,SC,boundary,windows):
+        SC1=SC[boundary-windows:boundary+windows]
+        SC1_mean=np.mean(SC1[SC1!=0])
+        LC1=LC[boundary-windows:boundary+windows]
+        LC1_mean=np.mean(LC1[LC1!=0])
+        
+        SV1=SV[boundary-windows:boundary+windows]
+        SV1_mean=np.mean(SV1[SC1!=0])
+        LV1=LV[boundary-windows:boundary+windows]
+        LV1_mean=np.mean(LV1[LC1!=0])
+        
+        resistance=abs((LV1_mean-SV1_mean)/(LC1_mean-SC1_mean))
+        
+        V_open_d3=abs(np.mean(LV1[LC1!=0]-resistance*LC1[LC1!=0]))
+        V_open_c3=abs(np.mean(SV1[SC1!=0]-resistance*SC1[SC1!=0]))
+
+        return(resistance,V_open_c3,V_open_d3)
+        
+    voltage_c_3=np.array([])
+    voltage_d_3=np.array([])
+
+    voltage_c_4=np.array([])
+    voltage_d_4=np.array([])   
+
+    resistance_c_3=np.array([])
+    resistance_d_3=np.array([])    
+        
+    for i in range(int(cb.shape[0])):
+        ## calculating values
+        R,V_open_c3,V_open_d3=resistance_v_cd(LV,SV,LC,SC,cb[i,0],windows)      
+        R2,V_open_c2,V_open_d2=resistance_v_cd(LV,SV,LC,SC,db[i,0],windows)
+        
+        ## appending values
+        resistance_c_3=np.append(resistance_c_3,R)
+        resistance_d_3=np.append(resistance_d_3,R2)
+
+        voltage_c_3=np.append(voltage_c_3,V_open_c3)
+        voltage_d_3=np.append(voltage_d_3,V_open_d3)
+        
+        voltage_c_4=np.append(voltage_c_4,V_open_c2)
+        voltage_d_4=np.append(voltage_d_4,V_open_d2)
+        
+
+        
     
     ## test to check if the shapes of the arguments are correct
     
@@ -1211,6 +1297,9 @@ def resistance():
     print(I_system_d.shape)
     print(V_open_c.shape)
     print(V_open_d.shape)
+    print(Nernst_voltage.shape)
+    print(Nernst_voltage_c.shape)
+    print(Nernst_voltage_d.shape)
     
     
     
@@ -1222,7 +1311,12 @@ def resistance():
     Current_d=np.mean(I_system_d,axis=1)
     open_voltage_c=V_open_c
     open_voltage_d=V_open_d
+    Resistance_c2=np.mean(np.abs((V_system_c.T-Nernst_voltage_c)/I_system_c.T),axis=0)
+    Resistance_d2=np.mean(np.abs((V_system_d.T-Nernst_voltage_d)/I_system_d.T),axis=0)
 
+    Resistance_c2
+    filename = 'globalsave.pkl'
+    dill.dump_session(filename)
     
     ## create an DataFrame
     
@@ -1233,15 +1327,42 @@ def resistance():
           "open V C": open_voltage_c,
           "open V d": open_voltage_d, 
           "current c":Current_c,
-          "current d":Current_d
+          "current d":Current_d,
+          "Nernst voltage C":Nernst_voltage_c,
+          "Nernst voltage D":Nernst_voltage_d,
+          "N resistance C": Resistance_c2,
+          "N resistance D": Resistance_d2,
+          "resistance 2 C":resistance_c_3,
+          "resistance 2 d":resistance_d_3,
+          "resistance 3 C":voltage_c_3,
+          "resistance 3 D":voltage_d_3,
+          "open voltage C":voltage_c_4,
+          "open voltage d":voltage_d_4
               }
     
-    df=pd.DataFrame(data)
+    df= pd.DataFrame.from_dict(data, orient='index')
+
+    
+    df=df.transpose()
     print(df)
+    print(Nernst_voltage)
     
     ## save to excel
     save_to_excel(df,"resistance",dataDir,sensorNum)
     
+    fig=plt.figure()
+    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+
+    plt.plot(V_open_5, label="Nernst cond 5")
+    plt.plot(V_open_3,label="Nernst cond 3")    
+#    plt.plot(Nernst_voltage,label="Nernst",alpha=0.4)
+
+    plt.xlabel("time")
+    plt.ylabel("voltage")
+    plt.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
+    mng = plt.get_current_fig_manager()
+    mng.full_screen_toggle()
+    plt.show()
 
 # Loads the stored values for membrane area and volume from the CSV
 def loadParams():

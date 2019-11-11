@@ -59,7 +59,7 @@ def bootstrap_linear_fit_plot_test(x,y,title_plot="test",confidence_interval=0.9
     x_new=np.expand_dims(np.arange(0,50,0.1),axis=1)
     b=np.expand_dims(b,axis=1)
     y_new=a+x_new*b.T
-    plt.scatter(x,y,c="b",label="raw data")
+    plt.scatter(x,y,c=np.linspace(0.1,1,len(x)),cmap="gray",label="raw data")
     plt.plot(x_new,y_new,c="r",alpha=0.2,zorder=-10)
     plt.title(r"{0}:   y=({1:.2f}$\pm${2:.2f})+({3:.2f}$\pm${4:.2f})*x)".format(str(title_plot),a_mean,a_std,b_mean,b_std))
     plt.xlim([0,max(x*1.1)])

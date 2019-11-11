@@ -2,6 +2,7 @@
 import directoryGetter
 import calculations as calc
 import dataGetters as getters
+import bootstrap 
 import dataReader
 import pathlib
 from datetime import datetime
@@ -294,7 +295,7 @@ def makeConductivityPlots():
     filterData = input('Filter Data? (y/n)\n') in 'yY'
     conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
 
-    if filterData:
+    if False:#filterData:
         output = input('Output Cleaned Data to Excel? (y/n)\n')
         if output == 'y' or output == 'Y':
             fileName = input('Enter a name for the file:\n')
@@ -337,9 +338,10 @@ def makeConductivityPlots():
             fig.add_subplot(3, 2, 2)
             plt.title('Conducitivity Sensor %s & %s' % (str(1),str(2)))
 
-        plt.plot(cond,ls="-.",alpha=alpha2)
+        plt.plot(cond,ls="-.",alpha=alpha2,label=str(i))
         plt.xlabel('Time (s)')
         plt.ylabel('Conductivity ($\\frac{mS}{cm}$)')
+        plt.legend()
         if includeCycles and i%2==0:
             dataReader.colorPlotCycles(dataDir, sensorUsed)  # Color the background
     mng = plt.get_current_fig_manager()
@@ -660,23 +662,30 @@ def makeCurrentPlot():
 # Details on how the fit is constructed is given in calculations.makeConcentrationModel()
 def makeConcentrationPlot():
     filterData = input('Filter Data (y/n)\n') in 'yY'
-    conductivities = [getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)]     # Conductivity in mS / cm
+    conductivities = [getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)]    
+    
+    ## test 
+#    plt.figure()
+#    plt.plot(conductivities[4])
+#    plt.plot(conductivities[3])
+    # Conductivity in mS / cm
 #    temps = [getters.getTemperatureData(dataDir, i, filtering=filterData) for i in range(1, 7)]
 #    concentrations = [calc.getConcentration(conductivities[i][0:int(np.minimum(len(conductivities[i]),len(temps[i])))], temps[i][0:int(np.minimum(len(conductivities[i]),len(temps[i])))]) for i in range(len(conductivities))]               # Concentration in mols / L
     concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*293.15) for i in range(len(conductivities))]    
     if filterData:
-        output = input('Output Cleaned Concentration Data to Excel? (y/n)\n')
-        if output == 'y' or output == 'Y':
-            fileName = input('Enter a name for the file:\n')
-            if '.xlsx' not in fileName:
-                fileName += '.xlsx'
-            data = {}
-            data['Time (s)'] = pd.read_csv(os.path.join(dataDir, 'CT01_CONDUCTIVITY.bcp'), delimiter='\t').to_numpy()[:, 0]
-            for i in range(1, 7):
-                data['Sensor {} (M)'.format(i)] = concentrations[i - 1]
-            formatData = dict([(k, pd.Series(v)) for k, v in data.items()])     # Makes all columns the same length
-            df = pd.DataFrame(formatData)
-            df.to_excel(fileName, index=False)
+        pass
+#        output = input('Output Cleaned Concentration Data to Excel? (y/n)\n')
+#        if output == 'y' or output == 'Y':
+#            fileName = input('Enter a name for the file:\n')
+#            if '.xlsx' not in fileName:
+#                fileName += '.xlsx'
+#            data = {}
+#            data['Time (s)'] = pd.read_csv(os.path.join(dataDir, 'CT01_CONDUCTIVITY.bcp'), delimiter='\t').to_numpy()[:, 0]
+#            for i in range(1, 7):
+#                data['Sensor {} (M)'.format(i)] = concentrations[i - 1]
+#            formatData = dict([(k, pd.Series(v)) for k, v in data.items()])     # Makes all columns the same length
+#            df = pd.DataFrame(formatData)
+#            df.to_excel(fileName, index=False)
 
    
 
@@ -717,15 +726,15 @@ def makeConcentrationPlot():
     for i, cond in enumerate(conductivities, 1):
         if i==6 or i==3:
             fig.add_subplot(3, 2, 3)
-            plt.title('Conducitivity Sensor %s & %s' % (str(3),str(6)))
+            plt.title('Conductivity Sensor %s & %s' % (str(3),str(6)))
 
             
         if i==4 or i==5:
             fig.add_subplot(3, 2, 5)
-            plt.title('Conducitivity Sensor %s & %s' % (str(4),str(5)))
+            plt.title('Conductivity Sensor %s & %s' % (str(4),str(5)))
         if i==1 or i==2:
             fig.add_subplot(3, 2, 1)
-            plt.title('Conducitivity Sensor %s & %s' % (str(1),str(2)))
+            plt.title('Conductivity Sensor %s & %s' % (str(1),str(2)))
 
         plt.plot(cond,ls="-.",alpha=alpha2)
         plt.xlabel('Time (s)')
@@ -837,10 +846,13 @@ def power_plot_cycles():
     
 
 def Gibbs(volume,concentration,T=293,v=2):
+    #https://science.sciencemag.org/content/sci/161/3844/884.full.pdf
+    #^^ activity coefficient
     m=concentration #about the same
+    gamma=0.68
     R=8.314 #j/(k*mol)
     kg_water=volume*0.997*1000
-    G=kg_water*v*m*R*T*np.log(m)
+    G=kg_water*v*m*R*T*np.log(gamma*m)
     G=G/(60*60*1000)
     return(G)
     
@@ -899,6 +911,7 @@ def free_energy_Gibbs():
        
     #### now we use the boundaries cb and db:
     
+    
     def delta_gibbs(Gibbs_total,bounds,window=100):
         
         delta_g=np.mean(Gibbs_total[np.arange(bounds[1]-window,bounds[1]+window)])-np.mean(Gibbs_total[np.arange(bounds[0]-window,bounds[0]+window)])
@@ -953,20 +966,26 @@ def free_energy_Gibbs():
     
     
     
-    
+    if len(DPsum)>len(CPsum):
+        CPsum=np.append(CPsum,np.nan)
+    if len(DPsum)<len(CPsum):
+        DPsum=np.append(DPsum,np.nan)    
     
     ratio_c=arraydatacharge[0:min(len(arraydatacharge),len(CPsum))]/CPsum[0:min(len(arraydatacharge),len(CPsum))]
     ratio_d=(DPsum[0:min(len(arraydatadischarge),len(DPsum))]/arraydatadischarge[0:min(len(arraydatadischarge),len(DPsum))])**-1
-    
+    ratio_cd=ratio_c[0:min(len(ratio_c),len(ratio_d))]*ratio_d[0:min(len(ratio_c),len(ratio_d))]
     ### storing the data in an dictionary and storing it in a DataFrame:
-    
+
     ## test dict
     d={"charging gibbs":arraydatacharge,
           "charging energy SP":CPsum,
           "ratio charging":ratio_c,
           "discharging gibbs":arraydatadischarge,
-          "disharging energy LD": DPsum,
-          "ratio discharging":ratio_d        
+          "discharging energy LD": DPsum,
+          "ratio discharging":ratio_d,
+          "RTE multiplication":np.abs(ratio_cd),
+          "ratio gibbs c/d":np.abs(arraydatacharge/arraydatadischarge),
+          "RTE discharge/charge":np.abs(DPsum/CPsum)
               }  
             
     df= pd.DataFrame.from_dict(d, orient='index')
@@ -990,7 +1009,7 @@ def free_energy_Gibbs():
 
     fig=plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
-    plt.subplot(2,1,1)
+    plt.subplot(3,1,1)
     plt.plot(G1,label="G1")
     plt.plot(G2,label="G2")
     plt.plot(G3,label="G3")
@@ -1003,7 +1022,7 @@ def free_energy_Gibbs():
     plt.xlabel("time(s)")
     plt.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
 
-    plt.subplot(2,1,2)
+    plt.subplot(3,1,2)
     plt.plot(Gibbs_total)
     plt.scatter(x,y,c="r",marker="x",s=int(10**2))
     plt.ylabel("KWH")
@@ -1011,6 +1030,8 @@ def free_energy_Gibbs():
     
     if includeCycles:
         dataReader.colorPlotCycles(dataDir, sensorUsed)
+
+    plt.subplot(3,1,3)
 
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
@@ -1104,7 +1125,12 @@ def resistance():
     
     
     ## give inputs of all the important data
-    
+    try:
+        print("Fujifilm | type 10 | perm=0.97 [0.95,0.99])")
+        ##https://www.fujifilmmembranes.com/images/IEM_brochure_1_1_-final_small_size.pdf      
+        permselectivity=float(input("what is the permselectivity of the membranes? (0-1)\n"))
+    except:
+        permselectivity=1
     
     while True:
         sensorNum = input('Enter stack number (select from {})\n'.format(calc.usedStacks))
@@ -1120,8 +1146,10 @@ def resistance():
         except AttributeError:
             print('{} is not a valid stack number.  Please enter a value in {}'.format(calc.usedStacks, sensorNum))
     
-    
     windows=int(input("what is the window to determine the resistance? (only integers)\n"))
+    
+
+    
     ## loading data
     
     LV=getters.getLoadVoltageData(dataDir, sensorNum)
@@ -1162,45 +1190,10 @@ def resistance():
         V_open_c=np.append(V_open_c,V_open(SV,cb[i,0],window=windows))
         V_open_d=np.append(V_open_d,V_open(LV,db[i,0],window=windows))
         
-    ## determine voltage load/supply 100 seconds after charging/discharging cycle has started. with a mean function
-    def x_system(x1,y1,bound,window=windows):
-        x=x1[np.arange(bound,bound+windows)]
-        y=y1[np.arange(bound,bound+windows)]
-    
-#        x=x[y!=0]
-        x=np.ma.masked_array(x,y==0)
-        y=np.ma.masked_array(y,y==0)
-        
-        
-        return(x)
 
-
-    V_system_c=np.array([])
-    V_system_d=np.array([])
-    I_system_c=np.array([])
-    I_system_d=np.array([])
-        
-    for i in range(int(cb.shape[0])):
-        if i==0:
-            V_system_c=x_system(SV,SC,cb[i,0],window=windows)
-            V_system_d=x_system(LV,LC,db[i,0],window=windows)
-            
-            I_system_c=x_system(SC,SC,cb[i,0],window=windows)
-            I_system_d=x_system(LC,LC,db[i,0],window=windows)
-        else:
-            try:
-                I_system_c=np.vstack((I_system_c,x_system(SC,SC,cb[i,0],window=windows)))
-                I_system_d=np.vstack((I_system_d,x_system(LC,LC,db[i,0],window=windows)) )                 
-                V_system_c=np.vstack((V_system_c,x_system(SV,SC,cb[i,0],window=windows)))
-                V_system_d=np.vstack((V_system_d,x_system(LV,LC,db[i,0],window=windows)) ) 
-                
-
-            except:
-                
-                print(i)
     ## calculating the open voltage using emperical data (concentration)
     
-    def open_voltage_function(C_salt,C_fresh):
+    def open_voltage_function(C_salt,C_fresh,permselectivity):
         if len(C_salt)>len(C_fresh):
             C_salt=C_salt[0:len(C_fresh)]
         else:
@@ -1209,16 +1202,17 @@ def resistance():
         R=8.314
         T=293.15
         F=96485.3329
+        gamma=0.68
         
         x=C_salt/C_fresh
-
-        E_0=R*T/F*np.log(x)
-        E_open=E_0*2*512
+        
+        E_0=R*T/F*np.log(gamma*x)
+        E_open=E_0*2*512*permselectivity
         return(E_open)
     
     
-    V_open_5=open_voltage_function(concentrations[1],concentrations[5])
-    V_open_3=open_voltage_function(concentrations[1],concentrations[3])
+    V_open_5=open_voltage_function(concentrations[1],concentrations[5],permselectivity)
+    V_open_3=open_voltage_function(concentrations[1],concentrations[3],permselectivity)
     
     
 
@@ -1242,102 +1236,114 @@ def resistance():
         Nernst_voltage_c=np.append(Nernst_voltage_c,np.mean(Nernst_voltage[cb[i,0]:cb[i,0]+windows]))
         Nernst_voltage_d=np.append(Nernst_voltage_d,np.mean(Nernst_voltage[db[i,0]:db[i,0]+windows]))
     
-    ## calculating V_open using Voltage charge and discharge process
 
-    def resistance_v_cd(LV,SV,LC,SC,boundary,windows):
-        SC1=SC[boundary-windows:boundary+windows]
-        SC1_mean=np.mean(SC1[SC1!=0])
-        LC1=LC[boundary-windows:boundary+windows]
-        LC1_mean=np.mean(LC1[LC1!=0])
         
-        SV1=SV[boundary-windows:boundary+windows]
-        SV1_mean=np.mean(SV1[SC1!=0])
-        LV1=LV[boundary-windows:boundary+windows]
-        LV1_mean=np.mean(LV1[LC1!=0])
-        
-        resistance=abs((LV1_mean-SV1_mean)/(LC1_mean-SC1_mean))
-        
-        V_open_d3=abs(np.mean(LV1[LC1!=0]-resistance*LC1[LC1!=0]))
-        V_open_c3=abs(np.mean(SV1[SC1!=0]-resistance*SC1[SC1!=0]))
+    ### 3th method for resistance and open voltage
+    #using a linear fit function on a window of charge discharge cycle as V=V_open (+-)R*I
+    # V(x)=A (+-)B*x 
+    #x=I        A=V_open        B=R
+    voltage_c_lin_fit=np.array([])
+    voltage_c_lin_fit_std=np.array([])
 
-        return(resistance,V_open_c3,V_open_d3)
-        
-    voltage_c_3=np.array([])
-    voltage_d_3=np.array([])
+    voltage_d_lin_fit=np.array([])
+    voltage_d_lin_fit_std=np.array([])
 
-    voltage_c_4=np.array([])
-    voltage_d_4=np.array([])   
-
-    resistance_c_3=np.array([])
-    resistance_d_3=np.array([])    
+    
+    resistance_c_lin_fit=np.array([])
+    resistance_d_lin_fit=np.array([])
+    resistance_c_lin_fit_std=np.array([])
+    resistance_d_lin_fit_std=np.array([])
+    
+    ## test for errors in code
+    def check_for_valid(array):
+        print(str(array))
         
+        if np.any(np.logical_or(array==np.nan,array==np.inf)):
+            print("window contains nan or inf\n")
+        else:
+            if np.any(np.where(array!=0)):
+                
+                print("no errors in array\n")
+            else:
+                print(str(array)+": contains only zeros\n")
+    
+    
+    ## actual fitting and bootstrapping
     for i in range(int(cb.shape[0])):
-        ## calculating values
-        R,V_open_c3,V_open_d3=resistance_v_cd(LV,SV,LC,SC,cb[i,0],windows)      
-        R2,V_open_c2,V_open_d2=resistance_v_cd(LV,SV,LC,SC,db[i,0],windows)
-        
-        ## appending values
-        resistance_c_3=np.append(resistance_c_3,R)
-        resistance_d_3=np.append(resistance_d_3,R2)
+        ## fitting function
+        print(i)
+#        try:
+        V,V_std,R,R_std=bootstrap.bootstrap_method_linear_fit(SC[cb[i,0]:cb[i,0]+windows],SV[cb[i,0]:cb[i,0]+windows],confidence_interval=0.95,samples=300)
+            
+#            V,R=np.polynomial.polynomial.Polynomial.fit(SC[cb[i,0]:cb[i,0]+windows],SV[cb[i,0]:cb[i,0]+windows],1).coef
+#        except:
+#            check_for_valid(SC[cb[i,0]:cb[i,0]+windows])
+#            check_for_valid(SV[cb[i,0]:cb[i,0]+windows])
+#            V,V_std,R,R_std=[np.nan,np.nan,np.nan,np.nan]
 
-        voltage_c_3=np.append(voltage_c_3,V_open_c3)
-        voltage_d_3=np.append(voltage_d_3,V_open_d3)
+            
+        print(i)
+        try:
+            V2,V2_std,R2,R2_std=bootstrap.bootstrap_method_linear_fit(LC[db[i,0]:db[i,0]+windows],LV[db[i,0]:db[i,0]+windows],confidence_interval=0.95,samples=300)
+#            V2,R2=np.polynomial.polynomial.Polynomial.fit(LC[db[i,0]:db[i,0]+windows],LV[db[i,0]:db[i,0]+windows],1).coef
+        except:
+            check_for_valid(LC[db[i,0]:db[i,0]+windows])
+            check_for_valid(LV[db[i,0]:db[i,0]+windows])
+            V2,V2_std,R2,R2_std=[np.nan,np.nan,np.nan,np.nan]
+        ## appending
+        voltage_c_lin_fit=np.append(voltage_c_lin_fit,V)
+        voltage_d_lin_fit=np.append(voltage_d_lin_fit,V2)
+        voltage_c_lin_fit_std=np.append(voltage_c_lin_fit_std,V_std)
+        voltage_d_lin_fit_std=np.append(voltage_d_lin_fit_std,V2_std)
         
-        voltage_c_4=np.append(voltage_c_4,V_open_c2)
-        voltage_d_4=np.append(voltage_d_4,V_open_d2)
-        
-
+        resistance_c_lin_fit=np.append(resistance_c_lin_fit,R)
+        resistance_d_lin_fit=np.append(resistance_d_lin_fit,R2)
+        resistance_c_lin_fit_std=np.append(resistance_c_lin_fit_std,R_std)
+        resistance_d_lin_fit_std=np.append(resistance_d_lin_fit_std,R2_std)
         
     
     ## test to check if the shapes of the arguments are correct
     
-    print(V_system_c.shape)
-    print(V_system_d.shape)
-    print(I_system_c.shape)
-    print(I_system_d.shape)
+
     print(V_open_c.shape)
     print(V_open_d.shape)
     print(Nernst_voltage.shape)
     print(Nernst_voltage_c.shape)
     print(Nernst_voltage_d.shape)
+    print(cb)
+    print(db)
     
-    
-    
-    Resistance_c=np.mean(np.abs((V_system_c.T-V_open_c)/I_system_c.T),axis=0)
-    Resistance_d=np.mean(np.abs((V_system_d.T-V_open_d)/I_system_d.T),axis=0)
-    Voltage_c=np.mean(V_system_c,axis=1)
-    Voltage_d=np.mean(V_system_d,axis=1)
-    Current_c=np.mean(I_system_c,axis=1)
-    Current_d=np.mean(I_system_d,axis=1)
-    open_voltage_c=V_open_c
-    open_voltage_d=V_open_d
-    Resistance_c2=np.mean(np.abs((V_system_c.T-Nernst_voltage_c)/I_system_c.T),axis=0)
-    Resistance_d2=np.mean(np.abs((V_system_d.T-Nernst_voltage_d)/I_system_d.T),axis=0)
 
-    Resistance_c2
-    filename = 'globalsave.pkl'
-    dill.dump_session(filename)
-    
+#    
     ## create an DataFrame
     
-    data={"resistance C":Resistance_c,
-          "resistance D":Resistance_d  ,
-          "voltage C":Voltage_c,
-          "voltage d":Voltage_d,
-          "open V C": open_voltage_c,
-          "open V d": open_voltage_d, 
-          "current c":Current_c,
-          "current d":Current_d,
-          "Nernst voltage C":Nernst_voltage_c,
-          "Nernst voltage D":Nernst_voltage_d,
-          "N resistance C": Resistance_c2,
-          "N resistance D": Resistance_d2,
-          "resistance 2 C":resistance_c_3,
-          "resistance 2 d":resistance_d_3,
-          "resistance 3 C":voltage_c_3,
-          "resistance 3 D":voltage_d_3,
-          "open voltage C":voltage_c_4,
-          "open voltage d":voltage_d_4
+    data={
+#            "resistance C":Resistance_c,
+#          "resistance D":Resistance_d  ,
+#          "voltage C":Voltage_c,
+#          "voltage d":Voltage_d,
+#          "open V C": open_voltage_c,
+#          "open V d": open_voltage_d, 
+#          "current c":Current_c,
+#          "current d":Current_d,
+#          "Nernst voltage C":Nernst_voltage_c,
+#          "Nernst voltage D":Nernst_voltage_d,
+#          "N resistance C": Resistance_c2,
+#          "N resistance D": Resistance_d2,
+#          "resistance 2 C":resistance_c_3,
+#          "resistance 2 d":resistance_d_3,
+#          "resistance 3 C":voltage_c_3,
+#          "resistance 3 D":voltage_d_3,
+#          "open voltage C":voltage_c_4,
+#          "open voltage d":voltage_d_4,
+          "open voltage lin c":voltage_c_lin_fit,
+          "open voltage lin c std":voltage_c_lin_fit_std,
+          "open voltage lin d":voltage_d_lin_fit,
+          "open voltage lin d std":voltage_d_lin_fit_std,
+          "resistance lin c":resistance_c_lin_fit,
+          "resistance lin c std":resistance_c_lin_fit_std,
+          "resistance lin d":resistance_d_lin_fit,
+          "resistance lin d std":resistance_d_lin_fit_std
               }
     
     df= pd.DataFrame.from_dict(data, orient='index')
@@ -1352,14 +1358,87 @@ def resistance():
     
     fig=plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+    
+    ## voltage with error plot
+    plt.subplot(2,1,1)
+    plt.errorbar(np.arange(len(voltage_c_lin_fit))+0.2,voltage_c_lin_fit,yerr=voltage_c_lin_fit_std,fmt='o',label="charging")
+    plt.errorbar(np.arange(len(voltage_d_lin_fit))-0.2,voltage_d_lin_fit,yerr=voltage_d_lin_fit_std,fmt='o',label="discharging")
+    plt.xlabel("cycle")
+    plt.ylabel(r"Voltage")
+    plt.xticks(np.arange(0,len(voltage_c_lin_fit)+0.1,1))
+    plt.legend(bbox_to_anchor=(1.02,0.5), loc="center left", borderaxespad=0)
 
-    plt.plot(V_open_5, label="Nernst cond 5")
-    plt.plot(V_open_3,label="Nernst cond 3")    
-#    plt.plot(Nernst_voltage,label="Nernst",alpha=0.4)
+    
+    ## resistance with error plot
+    plt.subplot(2,1,2)
+    plt.errorbar(np.arange(len(resistance_c_lin_fit))+0.2,resistance_c_lin_fit,yerr=resistance_c_lin_fit_std,fmt='o',label="charging")
+    plt.errorbar(np.arange(len(resistance_d_lin_fit))-0.2,resistance_d_lin_fit,yerr=resistance_d_lin_fit_std,fmt='o',label= "discharging")
+    plt.xticks(np.arange(0,len(resistance_c_lin_fit)+0.1,1))
+    plt.xlabel("cycle")
+    plt.ylabel(r"$\Omega$")
+    plt.legend(bbox_to_anchor=(1.02,0.5), loc="center left", borderaxespad=0)
+    
+    
+    
+    
+# open voltage test with nernst equation
+#    plt.plot(V_open_5, label="Nernst cond 5")
+#    plt.plot(V_open_3,label="Nernst cond 3")    
+##    plt.plot(Nernst_voltage,label="Nernst",alpha=0.4)
+#
+#    plt.xlabel("time")
+#    plt.ylabel("voltage")
+    mng = plt.get_current_fig_manager()
+    mng.full_screen_toggle()
+    plt.show()
+    
+def resistance_test_linear_plot():
+    
+    while True:
+        sensorNum = input('Enter stack number (select from {})\n'.format(calc.usedStacks))
+        if sensorNum == 'q':
+            return
+        try:
+            sensorNum = int(sensorNum)
+            if sensorNum not in calc.usedStacks:
+                raise AttributeError
+            break
+        except ValueError:
+            print('{} is not in a valid format.  Please enter an integer'.format(sensorNum))
+        except AttributeError:
+            print('{} is not a valid stack number.  Please enter a value in {}'.format(calc.usedStacks, sensorNum))
 
-    plt.xlabel("time")
-    plt.ylabel("voltage")
-    plt.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
+    windows=int(input("what is the window to determine the resistance? (only integers)\n"))
+    
+    test_cycles=input("what are the cycles you want to check? \n [seperated by a comma (,)] \n")
+    test_cycles=np.array(test_cycles.split(sep=","),dtype=int)
+
+    
+    ## loading data
+    
+    LV=getters.getLoadVoltageData(dataDir, sensorNum)
+    SV=getters.getSupplyVoltageData(dataDir, sensorNum)
+    
+    LC=getters.getLoadCurrentData(dataDir, sensorNum)
+    SC=getters.getSupplyCurrentData(dataDir, sensorNum)
+    
+    filterData=True
+    
+    sensorUsed=sensorNum
+    includeCycles=True
+    if includeCycles:
+        chargeCycles, dischargeCycles,cb,db = dataReader.getCycles1(dataDir, sensorUsed)
+    
+    
+    for a,i in enumerate(test_cycles):
+        
+        if a%3==0:
+            plt.figure(a)
+        plt.subplot(3,2,(a%3)*2+1)
+        bootstrap.bootstrap_linear_fit_plot_test(SC[cb[i,0]:cb[i,0]+windows],SV[cb[i,0]:cb[i,0]+windows],title_plot="charge cycle "+str(i))
+        plt.subplot(3,2,(a%3)*2+2)
+        bootstrap.bootstrap_linear_fit_plot_test(LC[db[i,0]:db[i,0]+windows],LV[db[i,0]:db[i,0]+windows],title_plot="discharge cycle "+str(i))
+    
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
     plt.show()
@@ -1393,6 +1472,7 @@ def menu():
         "12":free_energy_Gibbs,
         "13":total_PCV_plot,
         "14":resistance,
+        "15":resistance_test_linear_plot,
         'd': importFiles,
         'p': viewParams,
         'q': sys.exit
@@ -1425,6 +1505,7 @@ def optionDisplay():
     print("12 -> free energy efficiencies")
     print("13 -> total_PCV_plot")
     print("14 -> Resistance start cycles")
+    print("15 -> Resistance test linear plot and bootstrap")
     print('-----------------------------------')
     print('d -> Import New Data')
     print('p -> View Current Parameters')

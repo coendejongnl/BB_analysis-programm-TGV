@@ -6,15 +6,25 @@ from scipy import interpolate
 from timeit import default_timer as timer
 from scipy.interpolate import Rbf, InterpolatedUnivariateSpline
 
+import tkinter as tk
+from tkinter import filedialog
+
+root = tk.Tk()
+root.withdraw()
+
+file_path = filedialog.askopenfilename()
+
 
 t1=timer()
 
-dataDir="C:\\Users\\Media Markt\\Google Drive\\1 stage BlueBattery\\python\\data trial 1\\2019-09-02 10-26\\"
-
-df=pd.read_csv(dataDir + 'CT01_CONDUCTIVITY.bcp', header=None, delimiter='\t')
+#dataDir="C:\\Users\\Media Markt\\Google Drive\\1 stage BlueBattery\\python\\data trial 1\\2019-09-02 10-26\\"
+#
+#df=pd.read_csv(dataDir + 'CT01_CONDUCTIVITY.bcp', header=None, delimiter='\t')
+dataDir=file_path
+df=pd.read_csv(dataDir , header=None, delimiter='\t')
 t2=timer()
 
-print(t2-t1)
+#print(t2-t1)
 
 values=df.sort_values([3]).values[:,4]
 time=df.sort_values([3]).values[:,3].astype(dtype="datetime64")
@@ -32,11 +42,12 @@ time_new=np.arange(np.ceil(time_float[1]),int(time_float[dtime>0][-2]))
 ius = interpolate.interp1d(time_float[dtime!=0],values[dtime!=0])
 date_new=ius(time_new)
 
-plt.plot(date_new/np.max(date_new),"red")
-#plt.plot(time_float,-values,"blue",".")
+plt.plot(date_new)
+plt.plot(time_float,-values,".")
+plt.grid()
 
-
-
+print(np.max(time_new))
+print(np.max(time_float))
 
 
 
@@ -46,4 +57,4 @@ plt.plot(date_new/np.max(date_new),"red")
 
 t2=timer()
 
-print(t2-t1)
+#print(t2-t1)

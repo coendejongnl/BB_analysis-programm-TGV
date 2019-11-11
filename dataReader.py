@@ -10,6 +10,12 @@ import dataGetters as getters
 # Conductivity sensors give error value of 9.96.
 EPSILON = 0.01  # Checks for values near this error value to catch errors
 
+# time treshold for the boundaries
+time_filter=True # turn on or off to filter boundary intervals with a certain time treshold
+time_treshold=20*60 # everthing in seconds as the data is modified to 1 second intervals
+
+# time splitter
+time_inactive=60*60# everything in seconds
 
 # Function that takes current data from a supply and a load and returns the indices at Which
 # the system transitions between charging states.
@@ -93,9 +99,59 @@ def startsToBounds(chargeStarts, chargeEnds):
         else:   # This means we started charging and ended on a charge cycle (less common)
             chargeBounds = np.stack((chargeStarts[:-1], chargeEnds[1:]), axis=1)
             dischargeBounds = np.stack((chargeEnds[:], chargeEnds[:]), axis=1)
+    global time_filter
+    if time_filter:
+        (chargeBounds,dischargeBounds)=Bounds_to_short_filter(chargeBounds,dischargeBounds)
     return chargeBounds, dischargeBounds
 
 
+#function filtering data of below a certain treshold
+def Bounds_to_short_filter(chargeBounds,dischargeBounds):
+    global time_treshold 
+    
+    ## first Filter filters all the windows which are below a certain time treshold called treshold
+    # done by a delete function which deletes along axis n
+    bound_diff_start=np.diff(chargeBounds,axis=1)
+    bound_diff_end=np.diff(dischargeBounds,axis=1)
+    chargeBounds=np.delete(chargeBounds,np.where(bound_diff_start<time_treshold),axis=0)
+    dischargeBounds=np.delete(dischargeBounds,np.where(bound_diff_end<time_treshold),axis=0)
+    
+    ## second filter stitches windows together if the interval between them is small enough
+    #small number of boundaries no vectorizaton needed
+    for i in range(chargeBounds.shape[0]):
+        try:
+            while chargeBounds[i+1,0]-chargeBounds[i,1]<time_treshold:
+                chargeBounds[i,1]=chargeBounds[i+1,1]
+                chargeBounds=np.delete(chargeBounds,i+1,axis=0)
+        except:
+            pass                
+    for i in range(dischargeBounds.shape[0]):
+        try:
+            while dischargeBounds[i+1,0]-dischargeBounds[i,1]<time_treshold:
+                dischargeBounds[i,1]=dischargeBounds[i+1,1]
+                dischargeBounds=np.delete(dischargeBounds,i+1,axis=0)
+        except:
+            pass
+                
+    return(chargeBounds,dischargeBounds)
+                      
+                
+# function that splits the windows if there is over an hour zero elements in it
+    
+#work in progress
+#def Bound_splitter(boundary,current):
+#    global time_inactive
+#    for i in range(int(boundary.shape[0]*4)):
+#        try:
+#            current_window=current[boundary[i,0]:boundary[i,1]]
+#            current_nonzero=np.where(current_window==0)[0]
+#            current_diff_nonzero=np.diff(current_nonzero)
+#            if np.any(current_diff_nonzero>time_inactive):
+                
+                
+                
+                
+                
 # Converts continuous charging/discharging curves to only segments where it's either fully
 # charging or discharging.  Can be used for voltage, current, and power measurements
 def segmentData(chargeBounds, dischargeBounds, data):

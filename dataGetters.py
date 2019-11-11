@@ -32,7 +32,8 @@ def splining_array(time,data):
     
     dtime=np.append(dtime,1)
     time_float=np.cumsum(dtime)
-    time_new=np.arange(np.ceil(time_float[1]),int(time_float[dtime>0][-2]))    
+    time_new=np.arange(np.ceil(time_float[1]),int(np.max(time_float[dtime>0][-2])))    
+    print(time_float[dtime>0][-1])
     ius = interpolate.interp1d(time_float[dtime!=0],data[dtime!=0])
     data_new=ius(time_new)
     return(data_new)
@@ -55,27 +56,31 @@ def pathToArray(path):
     values=df.sort_values([3]).values[:, 4]
     new_values=splining_array(time,values)
     print("number of elements is= "+str(df.values[:, 4].size))
+    print("\n")
     return(new_values)
     
 def pathToArray1(path,sensorNum,filtering):
     
     print(str(path))
     df = pd.read_csv(path, header=None, delimiter='\t')
-
+    time=df.sort_values([3]).values[:,3]
+    values=df.sort_values([3]).values[:, 4]
+    
     if filtering:
-        time=df.sort_values([3]).values[:,3]
-        values=df.sort_values([3]).values[:, 4]
-        
         if sensorNum in [3,4,5,6]:  
 
-            time=time[np.logical_and(np.logical_and(values < 60,np.abs(values-10) > 0.3), np.abs(values-8) > 0.2)]
-            values=values[np.logical_and(np.logical_and(values < 60,np.abs(values-10) > 0.3), np.abs(values-8) > 0.2)]
+            time=time[np.logical_and(np.logical_and(values < 70,np.abs(values-10) > 0.3), np.abs(values-8) > 0.2)]
+            values=values[np.logical_and(np.logical_and(values < 70,np.abs(values-10) > 0.3), np.abs(values-8) > 0.2)]
         else:
             time=time[np.logical_and(values > 30 , np.abs(values-10) > 0.3)]
             values=values[np.logical_and(values > 30 , np.abs(values-10) > 0.3)]
             
     new_values=splining_array(time,values)
     print("number of elements is= "+str(df.values[:, 4].size))
+    print("ratio: "+str(df.values[:, 4].size/new_values.size))
+#    print()
+    print("max. time of array: "+str(len(new_values)))
+    print("\n")
     return(new_values)
 
 def pathToArray2(path):

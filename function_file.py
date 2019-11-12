@@ -16,6 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.signal import savgol_filter
+import scipy, scipy.stats
 
 
 #LC=None
@@ -1421,11 +1422,10 @@ def resistance_test_linear_plot():
     
     LC=getters.getLoadCurrentData(dataDir, sensorNum)
     SC=getters.getSupplyCurrentData(dataDir, sensorNum)
-    
-    filterData=True
-    
+        
     sensorUsed=sensorNum
     includeCycles=True
+    
     if includeCycles:
         chargeCycles, dischargeCycles,cb,db = dataReader.getCycles1(dataDir, sensorUsed)
     
@@ -1442,6 +1442,93 @@ def resistance_test_linear_plot():
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
     plt.show()
+    
+    
+def resistance_evolution():
+    #this method calculates the resistance for  a windown of points    
+    #assumptions V_open is constant and resistance is evolving
+    #V_open is calculated using the first points with   V!=0
+    #linear fit is used for simplicity
+
+
+    while True:
+        sensorNum = input('Enter stack number (select from {})\n'.format(calc.usedStacks))
+        if sensorNum == 'q':
+            return
+        try:
+            sensorNum = int(sensorNum)
+            if sensorNum not in calc.usedStacks:
+                raise AttributeError
+            break
+        except ValueError:
+            print('{} is not in a valid format.  Please enter an integer'.format(sensorNum))
+        except AttributeError:
+            print('{} is not a valid stack number.  Please enter a value in {}'.format(calc.usedStacks, sensorNum))
+
+    windows=int(input("what is the window to determine the resistance? (only integers)\n"))
+    
+    test_cycles=input("what are the cycles you want to check? \n [seperated by a comma (,)] \n")
+    test_cycles=np.array(test_cycles.split(sep=","),dtype=int)
+
+    
+    ## loading data
+    
+    LV=getters.getLoadVoltageData(dataDir, sensorNum)
+    SV=getters.getSupplyVoltageData(dataDir, sensorNum)
+    
+    LC=getters.getLoadCurrentData(dataDir, sensorNum)
+    SC=getters.getSupplyCurrentData(dataDir, sensorNum)
+        
+    sensorUsed=sensorNum
+    includeCycles=True
+    
+    if includeCycles:
+        chargeCycles, dischargeCycles,cb,db = dataReader.getCycles1(dataDir, sensorUsed)
+        
+    ##function which calculates the open voltage by taking all points which have a current below the mean ( the BMS is going to constant current so a lot of the data is centered. So all points below this are at the start of the phase.)
+    def open_voltage_and_resistance_evolution(I,V,boundaries,window,title="test"):
+        # modify data with zero voltage elements as this means the load or supply is not turned on yet.
+        
+        # first correct window
+        I=I[boundaries:boundaries+window]
+        V=V[boundaries:boundaries+window]
+        
+        # second points of interest
+        I=I[V!=0]
+        V=V[V!=0]
+        
+        #calculate mean I and take points below mean to calculate V_open
+        I_mean=np.mean(I)
+        ohm, V_open_start, r, p, err = scipy.stats.linregress(I[I<=I_mean],V[I<=I_mean])
+        
+        #use V_open_start to calculate the resistance through time
+        resistance=np.abs((V-V_open_start)/I)
+        plt.plot(np.arange(len(resistance)),resistance,label="resistance",c="b")
+        plt.ylabel(r"resistance $(\Omega)$")
+        plt.xlabel("time (s)")
+        plt.legend()
+
+        plt.title(title)
+                    
+    
+    for a,i in enumerate(test_cycles):
+        
+        if a%3==0:
+            fig=plt.figure(a)
+            fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+
+        plt.subplot(3,2,(a%3)*2+1)
+        open_voltage_and_resistance_evolution(SC,SV,cb[i,0],windows,title="charge cycle {0}".format(str(i)))
+        
+
+        plt.subplot(3,2,(a%3)*2+2)
+        open_voltage_and_resistance_evolution(LC,LV,db[i,0],windows,title="discharge cycle{0}".format(str(i)))
+        
+    
+    mng = plt.get_current_fig_manager()
+    mng.full_screen_toggle()
+    plt.show()
+    
 
 # Loads the stored values for membrane area and volume from the CSV
 def loadParams():
@@ -1473,6 +1560,7 @@ def menu():
         "13":total_PCV_plot,
         "14":resistance,
         "15":resistance_test_linear_plot,
+        "16":resistance_evolution,
         'd': importFiles,
         'p': viewParams,
         'q': sys.exit
@@ -1506,6 +1594,7 @@ def optionDisplay():
     print("13 -> total_PCV_plot")
     print("14 -> Resistance start cycles")
     print("15 -> Resistance test linear plot and bootstrap")
+    print("16 -> Resistance time evolution")
     print('-----------------------------------')
     print('d -> Import New Data')
     print('p -> View Current Parameters')

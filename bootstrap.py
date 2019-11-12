@@ -76,7 +76,7 @@ def bootstrap_linear_fit_plot_test(x,y,title_plot="test",confidence_interval=0.9
     y_lin=b_s_1+m_s_1*x_new
     
     
-    plt.scatter(x,y,c=np.linspace(0.1,1,len(x))[::-1],cmap="gray",label="raw data",zorder=20)
+    plt.scatter(x,y,c=np.linspace(0.1,1,len(x))[::-1],cmap="gray",label="raw data",zorder=20,edgecolors='gray')
     plt.plot(x_new,y_fit,c='b',label="fit bootstrap",zorder=15)
     plt.plot(x_new,y_lin,c="g",label="lin fit",zorder=15)
     plt.plot(x_new,y_new,c="r",alpha=0.2,zorder=10)

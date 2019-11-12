@@ -1468,7 +1468,13 @@ def resistance_evolution():
     windows=int(input("what is the window to determine the resistance? (only integers)\n"))
     
     test_cycles=input("what are the cycles you want to check? \n [seperated by a comma (,)] \n")
-    test_cycles=np.array(test_cycles.split(sep=","),dtype=int)
+    try:
+        test_cycles=np.array(test_cycles.split(sep=","),dtype=int)
+        test_cycles1=False
+    except:
+        test_cycles1=True
+        
+    testing=input("want to do the testing of the open voltage? (Y/y)\n") in "Yy"
 
     
     ## loading data
@@ -1484,6 +1490,10 @@ def resistance_evolution():
     
     if includeCycles:
         chargeCycles, dischargeCycles,cb,db = dataReader.getCycles1(dataDir, sensorUsed)
+
+    if test_cycles1:
+        test_cycles=np.arange(cb.shape[0])
+        
         
     ##function which calculates the open voltage by taking all points which have a current below the mean ( the BMS is going to constant current so a lot of the data is centered. So all points below this are at the start of the phase.)
     def open_voltage_and_resistance_evolution(I,V,boundaries,window,title="test"):
@@ -1497,10 +1507,15 @@ def resistance_evolution():
         I=I[V!=0]
         V=V[V!=0]
         
-        #calculate mean I and take points below mean to calculate V_open
-        I_mean=np.mean(I)
-        ohm, V_open_start, r, p, err = scipy.stats.linregress(I[I<=I_mean],V[I<=I_mean])
-        
+        #data for lin fit
+        I_lin=I[0:4]
+        V_lin=V[0:4]
+
+        try:
+            ohm, V_open_start, r, p, err = scipy.stats.linregress(I_lin,V_lin)
+        except:
+            V_open_start=np.nan
+            print(I_lin.shape)
         #use V_open_start to calculate the resistance through time
         resistance=np.abs((V-V_open_start)/I)
         plt.plot(np.arange(len(resistance)),resistance,label="resistance",c="b")
@@ -1508,22 +1523,69 @@ def resistance_evolution():
         plt.xlabel("time (s)")
         plt.legend()
 
-        plt.title(title)
+        plt.title(title+": open voltage = {0:.1f} V".format(V_open_start))
                     
     
     for a,i in enumerate(test_cycles):
-        
         if a%3==0:
             fig=plt.figure(a)
             fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
 
         plt.subplot(3,2,(a%3)*2+1)
-        open_voltage_and_resistance_evolution(SC,SV,cb[i,0],windows,title="charge cycle {0}".format(str(i)))
+        open_voltage_and_resistance_evolution(SC,SV,cb[i,0],windows,title="charge cycle {0}".format(str(i+1)))
         
 
         plt.subplot(3,2,(a%3)*2+2)
-        open_voltage_and_resistance_evolution(LC,LV,db[i,0],windows,title="discharge cycle{0}".format(str(i)))
+        open_voltage_and_resistance_evolution(LC,LV,db[i,0],windows,title="discharge cycle {0}".format(str(i+1)))
         
+        
+    #this is a test function to check which points are taken to determine the open voltage, which is used for all the calculations regarding resistance. (previous testing showed that the open voltage was negative for a lot of cases. So this is the debugging)
+    
+    def open_voltage_and_resistance_evolution_test(I,V,boundaries,window,title="test"):
+        # first correct window
+        I=I[boundaries:boundaries+window]
+        V=V[boundaries:boundaries+window]
+        plt.scatter(I,V,c="r",label="discarded data")
+        
+        # second points of interest
+        I=I[V!=0]
+        V=V[V!=0]
+        
+        #data for lin fit
+        I_lin=I[0:4]
+        V_lin=V[0:4]
+        
+        plt.scatter(I_lin,V_lin,c="k",label="data fit")
+        
+        #calculate mean I and take points below mean to calculate V_open
+        
+        try:
+            ohm, V_open_start, r, p, err = scipy.stats.linregress(I_lin,V_lin)
+            I_test=np.arange(0,6,0.1)
+            V_test=V_open_start+I_test*ohm
+            plt.plot(I_test,V_test,c="b",label="linear fit")
+            plt.xlabel("I")
+            plt.ylabel("V")
+            plt.xlim([0,max(I)*1.2])
+            plt.ylim([0,max(V)*1.2])
+            plt.legend()
+            plt.title(title+ r"   V={0:.2f}$\pm$ I*{1:.2f}".format(V_open_start,ohm))
+        except:
+            print(title+ " didnt work")
+        
+    
+    if testing:
+        for a,i in enumerate(test_cycles): 
+            if a%3==0:
+                fig=plt.figure(a+1)
+                fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+            plt.subplot(3,2,(a%3)*2+1)
+            open_voltage_and_resistance_evolution_test(SC,SV,cb[i,0],windows,title="charge cycle {0}: test lin fit".format(i))
+
+            plt.subplot(3,2,(a%3)*2+2)
+            open_voltage_and_resistance_evolution_test(LC,LV,db[i,0],windows,title="discharge cycle {0}: test lin fit".format(i))
+
+
     
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()

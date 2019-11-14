@@ -110,6 +110,20 @@ def pathToArray2(path):
     print("number of elements is= "+str(df.values[:, 4].size))
     return(new_values)
     
+def pathToArray_raw(path):
+    print(str(path))
+    df = pd.read_csv(path, header=None, delimiter='\t')
+    time=df.sort_values([3]).values[:,3]
+    data=df.sort_values([3]).values[:, 4]
+    
+    time=time.astype(dtype="datetime64")
+    dtime=(np.diff(time).astype(dtype="float")/1000)
+    
+    dtime=np.append(dtime,1)
+    time=np.cumsum(dtime)
+    
+    return(data,time)
+    
 def getSupplyCurrentData(dataDir, sensorNum):
     chargePath = dataDir + 'SP{:02d}_ACTUAL_CURRENT.bcp'.format(sensorNum)
     chargeData= pathToArray(chargePath)
@@ -120,7 +134,6 @@ def getLoadCurrentData(dataDir, sensorNum):
     dischargePath = dataDir + 'LD{:02d}_ACTUAL_CURRENT.bcp'.format(sensorNum)
     dischargeData = pathToArray(dischargePath)
     return (dischargeData)
-
 
 def getSupplyPowerData(dataDir, sensorNum):
     chargePath = dataDir + 'SP{:02d}_ACTUAL_POWER.bcp'.format(sensorNum)
@@ -218,3 +231,41 @@ def getConcentrationCalcData(calcPath):
     temp = data[:, 2]
     conc = data[:, 3]   # Convert mS/cm -> S/m
     return conc, temp, cond
+
+def getPCVT_raw(dataDir, sensorNum):
+    
+    chargePath = dataDir + 'SP{:02d}_ACTUAL_CURRENT.bcp'.format(sensorNum)
+    
+    SC,ST=pathToArray_raw(chargePath)
+    
+    
+    dischargePath = dataDir + 'LD{:02d}_ACTUAL_CURRENT.bcp'.format(sensorNum)
+    LC,LT=pathToArray_raw(dischargePath)
+
+    chargePath = dataDir + 'SP{:02d}_ACTUAL_VOLTAGE.bcp'.format(sensorNum)
+    SV,ST=pathToArray_raw(chargePath)
+
+    dischargePath = dataDir + 'LD{:02d}_ACTUAL_VOLTAGE.bcp'.format(sensorNum)
+    LV,LT=pathToArray_raw(dischargePath)
+    
+    SC=SC.astype(float)  
+    SV=SV.astype(float)
+    ST=ST.astype(float)
+    
+    LC=LC.astype(float)
+    LV=LV.astype(float)
+    LT=LT.astype(float)
+    
+    return(SC,SV,ST,LC,LV,LT)
+
+
+
+
+
+
+
+
+
+
+
+

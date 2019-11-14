@@ -31,23 +31,11 @@ time=df.sort_values([3]).values[:,3].astype(dtype="datetime64")
 
 dtime=np.abs(np.diff(time).astype(dtype="float")/1000)
 dtime=np.append(dtime,1)
-time_float=np.cumsum(dtime)
+time=np.cumsum(dtime)
 
-time_new=np.arange(np.ceil(time_float[1]),int(time_float[dtime>0][-2]))
 
-#tck = interpolate.splrep(time_float, values, s=0)
-#
-#date_new=interpolate.splev(time_new)
 
-ius = interpolate.interp1d(time_float[dtime!=0],values[dtime!=0])
-date_new=ius(time_new)
 
-plt.plot(date_new)
-plt.plot(time_float,-values,".")
-plt.grid()
-
-print(np.max(time_new))
-print(np.max(time_float))
 
 
 

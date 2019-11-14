@@ -93,14 +93,24 @@ def bootstrap_linear_fit_plot_test(x,y,title_plot="test",confidence_interval=0.9
     
 
 if __name__ == '__main__':
-    start=time.time()
-    N=100
-    x=np.random.rand(N)
+    sample_size=[10,50,100,1000]
+    fig=plt.plot("bootstrap method test")
+    plt.clf()
+    interval=4
+    for j,N in enumerate(sample_size):
+        start=time.time()
 
-    y=np.random.rand(N)-0.5+10+2*x
-    bootstrap_linear_fit_plot_test(x,y)
-#    a_mean,a_std,b_mean,b_std=bootstrap_method_linear_fit(x,y)
-    end=time.time()
-    print(end-start)
+        plt.subplot(2,2,j+1)
+        x=np.random.rand(N)*interval
+    
+        y=(np.random.rand(N))*interval-0.5+10+2*x
+        bootstrap_linear_fit_plot_test(x,y,confidence_interval=0.95,samples=1000)
+        
+        end=time.time()
+        print(end-start)
+    plt.tight_layout
+#        plt.title(str(np.round(end-start),decimals=2)+r"{0}:   y=({1:.2f}$\pm${2:.2f})+({3:.2f}$\pm${4:.2f})*x)".format(str(title_plot),a_mean,a_std,b_mean,b_std) )
+    #    a_mean,a_std,b_mean,b_std=bootstrap_method_linear_fit(x,y)
+    
     
     

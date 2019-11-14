@@ -1450,6 +1450,7 @@ def resistance_evolution():
     #V_open is calculated using the first points with   V!=0
     #linear fit is used for simplicity
 
+#    dataDir="C:\\Users\\Media Markt\\Google Drive\\1 stage BlueBattery\\python\\data trial 1\\2019-09-02 10-26\\"
 
     while True:
         sensorNum = input('Enter stack number (select from {})\n'.format(calc.usedStacks))
@@ -1484,24 +1485,33 @@ def resistance_evolution():
     
     LC=getters.getLoadCurrentData(dataDir, sensorNum)
     SC=getters.getSupplyCurrentData(dataDir, sensorNum)
+    
+    
+    ## in this function it is really important to have the raw data
+        # a new function has been added to do this without any filtering of the load current and time.
         
     sensorUsed=sensorNum
     includeCycles=True
     
     if includeCycles:
         chargeCycles, dischargeCycles,cb,db = dataReader.getCycles1(dataDir, sensorUsed)
-
+        print(db)
     if test_cycles1:
         test_cycles=np.arange(cb.shape[0])
+    
+    
+    SC,SV,ST,LC,LV,LT=getters.getPCVT_raw(dataDir,sensorNum)
         
-        
+    
+    
     ##function which calculates the open voltage by taking all points which have a current below the mean ( the BMS is going to constant current so a lot of the data is centered. So all points below this are at the start of the phase.)
-    def open_voltage_and_resistance_evolution(I,V,boundaries,window,title="test"):
+    def open_voltage_and_resistance_evolution(I,V,T,boundaries,window,title="test"):
         # modify data with zero voltage elements as this means the load or supply is not turned on yet.
-        
+        window_1=np.where(np.logical_and(boundaries<=T,boundaries+window>=T))
+
         # first correct window
-        I=I[boundaries:boundaries+window]
-        V=V[boundaries:boundaries+window]
+        I=I[window_1]
+        V=V[window_1]
         
         # second points of interest
         I=I[V!=0]
@@ -1512,16 +1522,19 @@ def resistance_evolution():
         V_lin=V[0:4]
 
         try:
-            ohm, V_open_start, r, p, err = scipy.stats.linregress(I_lin,V_lin)
+            ohm, V_open_start, r, p, err = scipy.stats.linregress(I_lin.astype(float),V_lin.astype(float))
         except:
             V_open_start=np.nan
             print(I_lin.shape)
         #use V_open_start to calculate the resistance through time
-        resistance=np.abs((V-V_open_start)/I)
-        plt.plot(np.arange(len(resistance)),resistance,label="resistance",c="b")
-        plt.ylabel(r"resistance $(\Omega)$")
-        plt.xlabel("time (s)")
-        plt.legend()
+        try:
+            resistance=np.abs((V-V_open_start)/I)
+            plt.plot(np.arange(len(resistance)),resistance,label="resistance",c="b")
+            plt.ylabel(r"resistance $(\Omega)$")
+            plt.xlabel("time (s)")
+            plt.legend()
+        except:
+            pass
 
         plt.title(title+": open voltage = {0:.1f} V".format(V_open_start))
                     
@@ -1529,22 +1542,23 @@ def resistance_evolution():
     for a,i in enumerate(test_cycles):
         if a%3==0:
             fig=plt.figure(a)
-            fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+            fig.subplots_adjust(left=0.04, bottom=None, right=None, top=None, wspace=0.5, hspace=0.4)
 
         plt.subplot(3,2,(a%3)*2+1)
-        open_voltage_and_resistance_evolution(SC,SV,cb[i,0],windows,title="charge cycle {0}".format(str(i+1)))
+        open_voltage_and_resistance_evolution(SC,SV,ST,cb[i-1,0],windows,title="charge cycle {0}".format(str(i)))
         
 
         plt.subplot(3,2,(a%3)*2+2)
-        open_voltage_and_resistance_evolution(LC,LV,db[i,0],windows,title="discharge cycle {0}".format(str(i+1)))
+        open_voltage_and_resistance_evolution(LC,LV,LT,db[i-1,0],windows,title="discharge cycle {0}".format(str(i)))
         
         
     #this is a test function to check which points are taken to determine the open voltage, which is used for all the calculations regarding resistance. (previous testing showed that the open voltage was negative for a lot of cases. So this is the debugging)
     
-    def open_voltage_and_resistance_evolution_test(I,V,boundaries,window,title="test"):
+    def open_voltage_and_resistance_evolution_test(I,V,T,boundaries,window,title="test"):
         # first correct window
-        I=I[boundaries:boundaries+window]
-        V=V[boundaries:boundaries+window]
+        window_1=np.where(np.logical_and(boundaries<=T,boundaries+window>=T))
+        I=I[window_1]
+        V=V[window_1]
         plt.scatter(I,V,c="r",label="discarded data")
         
         # second points of interest
@@ -1560,7 +1574,7 @@ def resistance_evolution():
         #calculate mean I and take points below mean to calculate V_open
         
         try:
-            ohm, V_open_start, r, p, err = scipy.stats.linregress(I_lin,V_lin)
+            ohm, V_open_start, r, p, err = scipy.stats.linregress(I_lin.astype(float),V_lin.astype(float))
             I_test=np.arange(0,6,0.1)
             V_test=V_open_start+I_test*ohm
             plt.plot(I_test,V_test,c="b",label="linear fit")
@@ -1580,10 +1594,10 @@ def resistance_evolution():
                 fig=plt.figure(a+1)
                 fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
             plt.subplot(3,2,(a%3)*2+1)
-            open_voltage_and_resistance_evolution_test(SC,SV,cb[i,0],windows,title="charge cycle {0}: test lin fit".format(i))
+            open_voltage_and_resistance_evolution_test(SC,SV,ST,cb[i,0],windows,title="charge cycle {0}: test lin fit".format(i))
 
             plt.subplot(3,2,(a%3)*2+2)
-            open_voltage_and_resistance_evolution_test(LC,LV,db[i,0],windows,title="discharge cycle {0}: test lin fit".format(i))
+            open_voltage_and_resistance_evolution_test(LC,LV,LT,db[i,0],windows,title="discharge cycle {0}: test lin fit".format(i))
 
 
     
@@ -1591,6 +1605,98 @@ def resistance_evolution():
     mng.full_screen_toggle()
     plt.show()
     
+    
+def resistance_delta_time():
+    
+    while True:
+        sensorNum = input('Enter stack number (select from {})\n'.format(calc.usedStacks))
+        if sensorNum == 'q':
+            return
+        try:
+            sensorNum = int(sensorNum)
+            if sensorNum not in calc.usedStacks:
+                raise AttributeError
+            break
+        except ValueError:
+            print('{} is not in a valid format.  Please enter an integer'.format(sensorNum))
+        except AttributeError:
+            print('{} is not a valid stack number.  Please enter a value in {}'.format(calc.usedStacks, sensorNum))
+
+    windows=int(input("what is the window to determine the resistance? (only integers)\n"))
+    
+    test_cycles=input("what are the cycles you want to check? \n [seperated by a comma (,)] \n")
+    try:
+        test_cycles=np.array(test_cycles.split(sep=","),dtype=int)
+        test_cycles1=False
+    except:
+        test_cycles1=True
+        
+
+    
+    ## loading data
+    
+    LV=getters.getLoadVoltageData(dataDir, sensorNum)
+    SV=getters.getSupplyVoltageData(dataDir, sensorNum)
+    
+    LC=getters.getLoadCurrentData(dataDir, sensorNum)
+    SC=getters.getSupplyCurrentData(dataDir, sensorNum)
+    
+    
+    ## in this function it is really important to have the raw data
+        # a new function has been added to do this without any filtering of the load current and time.
+        
+    sensorUsed=sensorNum
+    includeCycles=True
+    
+    if includeCycles:
+        chargeCycles, dischargeCycles,cb,db = dataReader.getCycles1(dataDir, sensorUsed)
+        print(db)
+    if test_cycles1:
+        test_cycles=np.arange(cb.shape[0])
+    
+    
+    SC,SV,ST,LC,LV,LT=getters.getPCVT_raw(dataDir,sensorNum)
+    
+    def delta_resistance(I,V,T,boundaries,window=100,title="test"):
+        # first correct window
+        window_1=np.where(np.logical_and(boundaries<=T,boundaries+window>=T))
+        I=I[window_1]
+        V=V[window_1]
+        
+        # second points of interest
+        I=I[V!=0]
+        V=V[V!=0]
+        
+        diff=np.append(np.diff(I),np.nan)
+        new_window=np.where(diff<0.3)
+        I=I[new_window]
+        V=V[new_window]
+        
+        delta_R=(np.append(np.diff(V),np.nan))/I
+        
+        plt.plot(delta_R,label="delta resistance", c="b")
+        plt.plot(np.cumsum(delta_R[1:]))
+        plt.xlabel("time(s)")
+        plt.ylabel(r"resistance ($\Omega$)")
+        plt.title(title)
+        
+    
+    for a,i in enumerate(test_cycles): 
+        
+            if a%3==0:
+                fig=plt.figure(a+1)
+                fig.subplots_adjust(left=0.05, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+            plt.subplot(3,2,(a%3)*2+1)
+            delta_resistance(SC,SV,ST,cb[i-1,0],windows,title="charge cycle {0}: resistance".format(str(i)))
+            plt.subplot(3,2,(a%3)*2+2)
+            delta_resistance(LC,LV,LT,db[i-1,0],windows,title="discharge cycle {0}: resistance".format(str(i)))
+
+
+    
+    mng = plt.get_current_fig_manager()
+    mng.full_screen_toggle()
+    plt.show()
+
 
 # Loads the stored values for membrane area and volume from the CSV
 def loadParams():
@@ -1623,6 +1729,7 @@ def menu():
         "14":resistance,
         "15":resistance_test_linear_plot,
         "16":resistance_evolution,
+        "17":resistance_delta_time,
         'd': importFiles,
         'p': viewParams,
         'q': sys.exit
@@ -1657,6 +1764,7 @@ def optionDisplay():
     print("14 -> Resistance start cycles")
     print("15 -> Resistance test linear plot and bootstrap")
     print("16 -> Resistance time evolution")
+    print("17 -> Resistance delta time")
     print('-----------------------------------')
     print('d -> Import New Data')
     print('p -> View Current Parameters')

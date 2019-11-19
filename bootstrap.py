@@ -93,6 +93,7 @@ def bootstrap_linear_fit_plot_test(x,y,title_plot="test",confidence_interval=0.9
     
 
 if __name__ == '__main__':
+    ### purely for testing and checking validity of the model and bootstrap method
     sample_size=[10,50,100,1000]
     fig=plt.plot("bootstrap method test")
     plt.clf()
@@ -102,8 +103,10 @@ if __name__ == '__main__':
 
         plt.subplot(2,2,j+1)
         x=np.random.rand(N)*interval
-    
         y=(np.random.rand(N))*interval-0.5+10+2*x
+        x=np.append(x,np.random.random(4))
+
+        y=np.append(y,np.random.random(4))
         bootstrap_linear_fit_plot_test(x,y,confidence_interval=0.95,samples=1000)
         
         end=time.time()

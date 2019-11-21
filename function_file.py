@@ -611,7 +611,7 @@ def makeConcentrationPlot():
     conductivities = [getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)]    
     
 
-    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*293.15) for i in range(len(conductivities))]    
+    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*20) for i in range(len(conductivities))]    
 
     includeCycles = input('Include Cycles in Background? (y/n)\n') in 'yY'
     if includeCycles:
@@ -908,7 +908,7 @@ def free_energy_Gibbs():
           "discharging energy LD": DPsum,
           "ratio discharging":ratio_d,
           "RTE multiplication":np.abs(ratio_cd),
-          "ratio gibbs c/d":np.abs(arraydatacharge/arraydatadischarge),
+          "ratio gibbs c/d":np.abs(arraydatacharge[0:min([len(arraydatacharge),len(arraydatadischarge)])]/arraydatadischarge[0:min([len(arraydatacharge),len(arraydatadischarge)])]),
           "RTE discharge/charge":np.abs(DPsum/CPsum)
               }  
             
@@ -1083,7 +1083,7 @@ def theoretical_resistance_and_open_voltage():
     flows = np.array([getters.getFlowData(dataDir, i) for i in range(1, 3)])
 
     conductivities = [getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)]    
-    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*293.15) for i in range(len(conductivities))]  
+    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*20) for i in range(len(conductivities))]  
     
     LC=getters.getLoadCurrentData(dataDir, sensorNum)
     SC=getters.getSupplyCurrentData(dataDir, sensorNum)
@@ -1135,11 +1135,13 @@ def theoretical_resistance_and_open_voltage():
             R_ohmic,R_non_ohmic,V_theoretical=calc.concentration_polarization_resistance(SC,SV,ST,cb[a,0],windows,Nernst_voltage,charging=True,title="charging cycle {0}".format(a+1))
             R_ohmic_c.append(R_ohmic)
             R_non_ohmic_c.append(R_non_ohmic)
+            V_theoretical_c.append(V_theoretical)
             
             plt.subplot(3,2,(a%3)*2+2)
             R_ohmic,R_non_ohmic,V_theoretical=calc.concentration_polarization_resistance(LC,LV,LT,db[a,0],windows,Nernst_voltage,charging=False,title="discharging cycle {0}".format(a+1))
             R_ohmic_d.append(R_ohmic)
             R_non_ohmic_d.append(R_non_ohmic)
+            V_theoretical_d.append(V_theoretical)
             
             
     ## and datafram dict
@@ -1158,7 +1160,7 @@ def theoretical_resistance_and_open_voltage():
 #    df=pd.DataFrame(data)
     df=df.transpose()
     print(df)
-    
+    plt.legend()
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
     plt.show()
@@ -1166,6 +1168,14 @@ def theoretical_resistance_and_open_voltage():
         
         
 def conservation_of_mass():
+    #test function
+    #
+    while True:
+        a=str(input("(F)ujifilm of (E)voque?\n") )
+        if a in "FfEe":
+            break
+    number_of_cells,surface_area,L,resistance_m2_A,resistance_m2_C,width_flow_canal,perm_selectivity=calc.brand_specifications(a)
+    
     filterData=True
     ## waterlevels only 1 - 3 are important
     levels = [getters.getLevelData(dataDir, i) for i in range(1, 5)]
@@ -1191,14 +1201,46 @@ def conservation_of_mass():
     mass_total=mass_d1+mass_d2+mass_s
     
     
+    ## theoretical open voltage
+    
+    ## calculations for open voltage using the nernst equation
+    V_open_5=calc.open_voltage_function(concentrations[1],concentrations[5],perm_selectivity)
+    V_open_3=calc.open_voltage_function(concentrations[1],concentrations[3],perm_selectivity)
+    
+    ## checking which tank is providing water to the stacks (dilute 1 or 2)
+    level3 = getters.getLevelData(dataDir, 3) 
+
+    tank3_diff=np.diff(level3)
+    [V_open_3,V_open_5,tank3_diff]=make_same_len([V_open_3,V_open_5,tank3_diff])
+    
+    ## tank3_diff<0 means the level is dropping -> providing water to the stacks
+    Nernst_voltage=np.where(tank3_diff<=0,V_open_3,V_open_5)
+    
+    print(Nernst_voltage)
+    
+    ##plotting
+    fig=plt.plot()
+    ax1=plt.subplot(3,1,1)
     plt.plot(mass_s,label="salt")
     plt.plot(mass_d1,label="fresh 1")
     plt.plot(mass_d2,label="fresh 2")
     plt.plot(mass_total,label="total mass")
     plt.legend()
-
+    
+    ax2=plt.subplot(3,1,2)
+    plt.plot(V_open_3,label="V 3")
+    plt.plot(V_open_5,label="V 5")
+    plt.plot(-Nernst_voltage, label="Nernst")
+#    plt.fill_between(np.arange(Nernst_voltage),Nernst_voltage,label="theoretical",alpha=0.2,c="r",zorder=-5)    
+    
+    
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
+    
+    
+
+    
+
     plt.show()
         
     

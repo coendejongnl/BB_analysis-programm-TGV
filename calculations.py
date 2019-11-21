@@ -199,7 +199,7 @@ def open_voltage_function(C_salt,C_fresh,permselectivity):
     R=8.314
     T=293.15
     F=96485.3329
-    gamma=0.91
+    gamma=1
     
     x=C_salt/C_fresh
     
@@ -214,7 +214,7 @@ def concentration_polarization_resistance(I,V,time,boundary,window,V_theoretical
     plt.scatter(I,V,label="discarded data",c="r",zorder=-10)
     
     ## V_theoretical mean in window
-    V_theoretical=np.mean(V_theoretical[window_of_interrest])
+    V_theoretical=np.mean(V_theoretical[boundary:boundary+window])
     #discard values of voltage zero
     I=I[V!=0]
     V=V[V!=0]
@@ -223,7 +223,7 @@ def concentration_polarization_resistance(I,V,time,boundary,window,V_theoretical
     V=V[I>0.5]
     I=I[I>0.5]
     try:
-        plt.scatter(I,V,label="data used",c="g",zorder=-5)
+        plt.scatter(I,V,label="data used",c="g",zorder=0)
         plt.title(title)
         plt.xlabel("I")
         plt.ylabel("V")
@@ -232,26 +232,33 @@ def concentration_polarization_resistance(I,V,time,boundary,window,V_theoretical
         x=np.expand_dims(x,1)
         if charging:
             resistance=(V-V_theoretical)/I
-    #        resistance1=np.expand_dims(resistance,1)
             
-    #        y=V_theoretical+resistance1*x
     
         else:
             resistance=-(V-V_theoretical)/I
-    #        resistance1=np.expand_dims(resistance,1)
     
-    #        y=V_theoretical-resistance1*x
     
         
-    #    plt.plot(x,y,"-.")
         try:
+            
             R_ohmic=min(resistance)
             R_non_ohmic=max(resistance)-min(resistance)
+            
+            R_non_ohmic_index=np.argmax(resistance)
+            R_ohmic_index=np.argmin(resistance)
         except:
             R_ohmic=np.nan
             R_non_ohmic=np.nan
-        plt.scatter(0,V_theoretical,c="b")
-        plt.legend()
+            
+        plt.scatter(0,V_theoretical,c="b", label="open voltage")
+        x=np.full(V.shape,0)
+        x=np.column_stack((x,I)).T
+        y=np.full(V.shape,V_theoretical)
+        y=np.column_stack((y,V)).T
+        
+        plt.plot(x,y,zorder=-5,alpha=.2,c="r")
+        plt.scatter(I[np.array([R_non_ohmic_index,R_ohmic_index])],V[np.array([R_non_ohmic_index,R_ohmic_index])],c="c",zorder=10,label="import data")
+#        plt.legend()
     except:
         print("error has occured in:"+title)
     return(R_ohmic,R_non_ohmic,V_theoretical)

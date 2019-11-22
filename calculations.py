@@ -143,8 +143,10 @@ def theoretical_resistance(flowrate_s_raw,flowrate_r_raw,concentration_s,concent
     
     ##same length function
     def same_length(a):
+        """simple array formatter which makes all arrays in list a the same length"""
+        min_len=None #define as None to raise an error first loop
+        
         for i in a:
-#            print(len(i))
             try:
                 min_len=np.min([len(i),min_len])
                 
@@ -154,9 +156,10 @@ def theoretical_resistance(flowrate_s_raw,flowrate_r_raw,concentration_s,concent
         new_list=[]
         for i in a:
             new_list.append(np.array(i[0:min_len]))
-#            print(len(i[0:min_len]))
 
         return(new_list)
+        
+        
     ################R membranes############
     resistance_A=number_of_cells*(resistance_m2_A/surface_area)
     resistance_C=number_of_cells*(resistance_m2_C/surface_area)
@@ -258,7 +261,7 @@ def concentration_polarization_resistance(I,V,time,boundary,window,V_theoretical
         
         plt.plot(x,y,zorder=-5,alpha=.2,c="r")
         plt.scatter(I[np.array([R_non_ohmic_index,R_ohmic_index])],V[np.array([R_non_ohmic_index,R_ohmic_index])],c="c",zorder=10,label="import data")
-#        plt.legend()
+        plt.legend()
     except:
         print("error has occured in:"+title)
     return(R_ohmic,R_non_ohmic,V_theoretical)

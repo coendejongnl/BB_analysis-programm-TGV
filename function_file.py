@@ -39,18 +39,18 @@ alpha2=1
 
 
 def save_to_excel(df,name,dataDir,sensorNum):
+    """This function saves a dataframe to excel and stores it in de directory of the data in the folder (data_analysis)"""
     
     
-    
-        while True:
-            try:
-                df.to_excel(str(dataDir)+"data_analysis/"+str(name)+"{}.xlsx".format(sensorNum), sheet_name=str(name)+'_sensor_{}'.format(sensorNum), index=False)
-                break
-            except PermissionError:
-                print('Attempting to Overwrite an Open Excel Workbook.\nPlease Close the Workbook or Change the Name of the Destination File')
-                fileName = input('Input new file name\n')
-                if '.xlsx' not in fileName:     # Forgive our poor user for not including the proper file extension
-                    fileName += '.xlsx'
+    while True:
+        try:
+            df.to_excel(str(dataDir)+"data_analysis/"+str(name)+"{}.xlsx".format(sensorNum), sheet_name=str(name)+'_sensor_{}'.format(sensorNum), index=False)
+            break
+        except PermissionError:
+            print('Attempting to Overwrite an Open Excel Workbook.\nPlease Close the Workbook or Change the Name of the Destination File')
+            fileName = input('Input new file name\n')
+            if '.xlsx' not in fileName:     # Forgive our poor user for not including the proper file extension
+                fileName += '.xlsx'
                     
     
 ## this function makes all the arrays in the list the same size, which is a function used a lot !!!
@@ -1109,7 +1109,7 @@ def theoretical_resistance_and_open_voltage():
     Nernst_voltage=np.where(tank3_diff<=0,V_open_3,V_open_5)
 
     ## using correction from the measurements of redstack. 0.79 percentage of the theoretical open voltage
-    Nernst_voltage=Nernst_voltage*0.79
+    Nernst_voltage=Nernst_voltage*0.78
     
     ########### using a window of N length after starting the load or supply  ################
     
@@ -1151,19 +1151,28 @@ def theoretical_resistance_and_open_voltage():
        "R ohmic d":R_ohmic_d,
        "R non ohmic d":R_non_ohmic_d,
        "V open d":V_theoretical_d
-       
               }  
+    
+    resistance_df={"R_c":R_c,
+                   "R_membranes":R_membranes
+                   }
             
     df= pd.DataFrame.from_dict(d, orient='index')
-
+    df2=pd.DataFrame(resistance_df)
         
 #    df=pd.DataFrame(data)
     df=df.transpose()
+    df2=df2.transpose()
+    
     print(df)
-    plt.legend()
+    print(df2)
+    save_to_excel(df,"resistance",dataDir,sensorNum)
+    save_to_excel(df,"resistance_theoretical",dataDir,sensorNum)
+    
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
     plt.show()
+
     
         
         
@@ -1182,7 +1191,7 @@ def conservation_of_mass():
     ## conductivity
     conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
     
-    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*293.15) for i in range(len(conductivities))] 
+    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*20) for i in range(len(conductivities))] 
     
     def same_length(x):
         a=[]
@@ -1216,7 +1225,8 @@ def conservation_of_mass():
     ## tank3_diff<0 means the level is dropping -> providing water to the stacks
     Nernst_voltage=np.where(tank3_diff<=0,V_open_3,V_open_5)
     
-    print(Nernst_voltage)
+    ## correction of the theoretical open voltage versus the measurements of redstack
+    Nernst_voltage=0.78*Nernst_voltage
     
     ##plotting
     fig=plt.plot()

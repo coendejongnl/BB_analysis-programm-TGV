@@ -772,8 +772,8 @@ def power_plot_cycles():
 def Gibbs(volume,concentration,T=293,v=2):
     #https://science.sciencemag.org/content/sci/161/3844/884.full.pdf
     #^^ activity coefficient
-    m=concentration #about the same
-    gamma=0.901
+    m=concentration #about the same as the concentration is low
+    gamma=calc.concentration_to_gamma(concentration)
     R=8.314 #j/(k*mol)
     kg_water=volume*0.997*1000
     G=kg_water*v*m*R*T*np.log(gamma*m)
@@ -800,9 +800,11 @@ def free_energy_Gibbs():
     ## waterlevels only 1 - 3 are important
     levels = [getters.getLevelData(dataDir, i) for i in range(1, 5)]
     ## conductivity
-    conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
     
-    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*293.15) for i in range(len(conductivities))] 
+    conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
+#    temps = [getters.getTemperatureData(dataDir, i, filtering=filterData) for i in range(1, 7)]
+    
+    concentrations = [calc.getConcentration(conductivities[i],np.full(conductivities[i].shape,20)) for i in range(len(conductivities))] 
     
     ## concentration
     
@@ -956,7 +958,7 @@ def free_energy_Gibbs():
         dataReader.colorPlotCycles(dataDir, sensorUsed)
 
     plt.subplot(3,1,3)
-
+#    plt.plot(levels)
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
     plt.show()
@@ -1020,7 +1022,7 @@ def total_PCV_plot():
     
     
     plt.subplot(3,2,5)
-    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
+#    fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
     if includeCycles:
         dataReader.colorPlotCycles(dataDir, sensorNum) 
     
@@ -1036,9 +1038,10 @@ def total_PCV_plot():
 #    plt.scatter(np.ones(shape=len(LV))[LC!=0],"rx")
 #    plt.xlabel("time")
 #    plt.ylabel("voltage with no current")
+    plt.show()  
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
-    plt.show()
+
     
     
 def theoretical_resistance_and_open_voltage():
@@ -1129,8 +1132,8 @@ def theoretical_resistance_and_open_voltage():
         V_theoretical_d=[]
         for a,i in enumerate(test_cycles):        
             if a%3==0:
-                plt.figure(a)
-                
+                fig=plt.figure(a)
+                fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
             plt.subplot(3,2,(a%3)*2+1)
             R_ohmic,R_non_ohmic,V_theoretical=calc.concentration_polarization_resistance(SC,SV,ST,cb[a,0],windows,Nernst_voltage,charging=True,title="charging cycle {0}".format(a+1))
             R_ohmic_c.append(R_ohmic)

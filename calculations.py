@@ -2,6 +2,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.stats import linregress
 import pandas as pd
+from scipy.interpolate import interp1d
+
 
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
@@ -202,7 +204,7 @@ def open_voltage_function(C_salt,C_fresh,permselectivity):
     R=8.314
     T=293.15
     F=96485.3329
-    gamma=1
+    gamma=np.divide(concentration_to_gamma(C_salt),concentration_to_gamma(C_fresh))
     
     x=C_salt/C_fresh
     
@@ -265,5 +267,15 @@ def concentration_polarization_resistance(I,V,time,boundary,window,V_theoretical
     except:
         print("error has occured in:"+title)
     return(R_ohmic,R_non_ohmic,V_theoretical)
+
+
+def concentration_to_gamma(concentration):
+    """This function takes the concentration as an input and uses a interpolation function to create the correct gamma as an output"""
+    molality=np.array([0.01,0.02,0.05,0.1,0.2, 0.3,0.5,0.7,1])
+    gamma=np.array([0.904,0.875,0.824,0.781,0.734,0.709,0.68,0.664,0.65])
+    f=interp1d(molality,gamma)
+    
+    gamma_new=f(concentration)
+    return(gamma_new)
 
     

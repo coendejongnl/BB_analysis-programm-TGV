@@ -14,9 +14,6 @@ EPSILON = 0.01  # Checks for values near this error value to catch errors
 time_filter=True # turn on or off to filter boundary intervals with a certain time treshold
 time_treshold=20*60 # everthing in seconds as the data is modified to 1 second intervals
 
-# time splitter
-time_inactive=60*60# everything in seconds
-
 # Function that takes current data from a supply and a load and returns the indices at Which
 # the system transitions between charging states.
 # Determines charging state by looking for where either device outputs 0's for extended periods
@@ -135,20 +132,7 @@ def Bounds_to_short_filter(chargeBounds,dischargeBounds):
                 
     return(chargeBounds,dischargeBounds)
                       
-                
-# function that splits the windows if there is over an hour zero elements in it
-    
-#work in progress
-#def Bound_splitter(boundary,current):
-#    global time_inactive
-#    for i in range(int(boundary.shape[0]*4)):
-#        try:
-#            current_window=current[boundary[i,0]:boundary[i,1]]
-#            current_nonzero=np.where(current_window==0)[0]
-#            current_diff_nonzero=np.diff(current_nonzero)
-#            if np.any(current_diff_nonzero>time_inactive):
-                
-                
+
                 
                 
                 

@@ -3,6 +3,8 @@ Program that performs analysis on data from the Blue Battery Pilot Project in De
 Requires that all data from the BMS are contained in a single folder and are unmodified (same name, columns, etc.)
 Author: Thomas Richards
 Version: 1.0
+Author: Coen de Jong
+Version: 1.1
 '''
 
 # ======================================= Imports =================================================

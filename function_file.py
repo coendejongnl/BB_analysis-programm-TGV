@@ -803,8 +803,8 @@ def free_energy_Gibbs():
     
     conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
 #    temps = [getters.getTemperatureData(dataDir, i, filtering=filterData) for i in range(1, 7)]
-    
-    concentrations = [calc.getConcentration(conductivities[i],np.full(conductivities[i].shape,20)) for i in range(len(conductivities))] 
+    Temp=np.array([getters.getTemperatureData(dataDir, i, filtering=filterData) for i in range(1, 7)])
+    concentrations = [calc.getConcentration(conductivities[i],Temp[i]) for i in range(len(conductivities))] 
     
     ## concentration
     
@@ -841,6 +841,7 @@ def free_energy_Gibbs():
     def delta_gibbs(Gibbs_total,bounds,window=100):
         
         delta_g=np.mean(Gibbs_total[np.arange(bounds[1]-window,bounds[1]+window)])-np.mean(Gibbs_total[np.arange(bounds[0]-window,bounds[0]+window)])
+        delta_g=np.abs(delta_g)
         return(delta_g)
         
     arraydatacharge=np.array([])
@@ -898,7 +899,7 @@ def free_energy_Gibbs():
         DPsum=np.append(DPsum,np.nan)    
     
     ratio_c=arraydatacharge[0:min(len(arraydatacharge),len(CPsum))]/CPsum[0:min(len(arraydatacharge),len(CPsum))]
-    ratio_d=(DPsum[0:min(len(arraydatadischarge),len(DPsum))]/arraydatadischarge[0:min(len(arraydatadischarge),len(DPsum))])**-1
+    ratio_d=(DPsum[0:min(len(arraydatadischarge),len(DPsum))]/arraydatadischarge[0:min(len(arraydatadischarge),len(DPsum))])
     ratio_cd=ratio_c[0:min(len(ratio_c),len(ratio_d))]*ratio_d[0:min(len(ratio_c),len(ratio_d))]
     ### storing the data in an dictionary and storing it in a DataFrame:
 
@@ -915,15 +916,7 @@ def free_energy_Gibbs():
               }  
             
     df= pd.DataFrame.from_dict(d, orient='index')
-#    data={"charging gibbs":arraydatacharge,
-#          "charging energy SP":CPsum,
-##          "ratio charging":arraydatacharge/CPsum,
-#          "discharging gibbs":arraydatadischarge,
-#          "disharging energy LD": DPsum,
-##          "ratio discharging":DPsum/arraydatadischarge        
-#              }
-        
-#    df=pd.DataFrame(data)
+
     df=df.transpose()
     print(df)
     
@@ -935,7 +928,7 @@ def free_energy_Gibbs():
 
     fig=plt.figure()
     fig.subplots_adjust(left=0.065, bottom=None, right=None, top=None, wspace=0.4, hspace=0.4)
-    plt.subplot(3,1,1)
+    plt.subplot(3,2,1)
     plt.plot(G1,label="G1")
     plt.plot(G2,label="G2")
     plt.plot(G3,label="G3")
@@ -948,7 +941,7 @@ def free_energy_Gibbs():
     plt.xlabel("time(s)")
     plt.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
 
-    plt.subplot(3,1,2)
+    plt.subplot(3,2,3)
     plt.plot(Gibbs_total)
     plt.scatter(x,y,c="r",marker="x",s=int(10**2))
     plt.ylabel("KWH")
@@ -957,8 +950,20 @@ def free_energy_Gibbs():
     if includeCycles:
         dataReader.colorPlotCycles(dataDir, sensorUsed)
 
-    plt.subplot(3,1,3)
-#    plt.plot(levels)
+    plt.subplot(3,2,5)
+    size=int(8**2)
+    plt.scatter(np.arange(len(ratio_c))+1.1,ratio_c,marker="x",c="g",s=size,label=r"$\mu_{charging}$")
+    plt.scatter(np.arange(len(ratio_d))-0.1+1,ratio_d,marker="o",c="r",s=size,label=r"$\mu_{discharging}$")
+    plt.scatter(np.arange(len(ratio_cd))+1,ratio_cd,marker="p",c="b",s=size,label=r"$\mu_{RTE}$")
+    plt.ylabel("efficiency[-]")
+    plt.xlabel("Cycle number [-]")
+    plt.ylim(0,1.2)
+    plt.legend(bbox_to_anchor=(1.04,0.5), loc="center left", borderaxespad=0)
+    plt.xticks(ticks=np.arange(len(ratio_d)))
+    
+    
+    plt.subplot(3,2,6)
+    calc.double_integral(ratio_c,ratio_d)
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
     plt.show()
@@ -1190,12 +1195,12 @@ def conservation_of_mass():
     
     filterData=True
     ## waterlevels only 1 - 3 are important
-    levels = [getters.getLevelData(dataDir, i) for i in range(1, 5)]
+    levels = [getters.getLevelData(dataDir, i)*1000 for i in range(1, 5)]
     ## conductivity
     conductivities = np.array([getters.getConductivityData(dataDir, i, filtering=filterData) for i in range(1, 7)])
     
-    concentrations = [calc.getConcentration(conductivities[i], np.ones(shape=conductivities[i].shape)*20) for i in range(len(conductivities))] 
-    
+    Temp=np.array([getters.getTemperatureData(dataDir, i, filtering=filterData) for i in range(1, 7)])
+    concentrations = [calc.getConcentration(conductivities[i],Temp[i]) for i in range(len(conductivities))]     
     def same_length(x):
         a=[]
         for i in x:
@@ -1210,7 +1215,7 @@ def conservation_of_mass():
     mass_s=levels[1]*(concentrations[0]+concentrations[1])
     mass_d1=levels[2]*(concentrations[2]+concentrations[5])
     mass_d2=levels[3]*(concentrations[3]+concentrations[4])
-    mass_total=mass_d1+mass_d2+mass_s
+    mass_total=(mass_d1+mass_d2+mass_s)*58.44/1000
     
     
     ## theoretical open voltage
@@ -1233,32 +1238,55 @@ def conservation_of_mass():
     
     ##plotting
     fig=plt.plot()
-    ax1=plt.subplot(3,1,1)
-    plt.plot(mass_s,label="salt")
-    plt.plot(mass_d1,label="fresh 1")
-    plt.plot(mass_d2,label="fresh 2")
-    plt.plot(mass_total,label="total mass")
+    ax1=plt.subplot(3,2,1)
+#    plt.plot(mass_s,label="salt")
+#    plt.plot(mass_d1,label="fresh 1")
+#    plt.plot(mass_d2,label="fresh 2")
+    plt.plot(mass_total,label="total mass NaCl")
+    plt.ylabel("kg")
+    plt.xlabel("time(s)")
     plt.legend()
     
-    ax2=plt.subplot(3,1,2)
+    ax2=plt.subplot(3,2,3)
     plt.plot(V_open_3,label="V 3")
     plt.plot(V_open_5,label="V 5")
     plt.plot(-Nernst_voltage, label="Nernst")
-#    plt.fill_between(np.arange(Nernst_voltage),Nernst_voltage,label="theoretical",alpha=0.2,c="r",zorder=-5)    
+  
     
     
     mng = plt.get_current_fig_manager()
     mng.full_screen_toggle()
-    
-    
 
-    
 
     plt.show()
-        
     
-#    plt.stackplot(np.arange(len(R_c)),R_c,np.full(R_c.shape,R_membranes))
-
+def monte_carlo_best_stack_long_title():
+    
+    N=int(input("give the order of samples you want to run. (1ex) give x \n"))
+    N=int(10**N)
+    #loading the data from the file which is made by hand
+    df=pd.read_excel("efficiencies.xlsx")
+    
+    columns=df.shape[1]
+    
+    #creating round trip efficiencies
+    RTE=[]
+    labels1=[]
+    print("prepping data")
+    for i in range(int(columns/2)):
+#        print(i)
+        labels1.append(df.columns[int(i*2)][0:2])
+#        print(df.columns[int(i*2)])
+        
+        a1,a2=np.meshgrid(df.iloc[:,2*i+1],df.iloc[:,2*i])
+        efficiencies=a1*a2
+        efficiencies=efficiencies.flatten()
+        efficiencies=efficiencies[~np.isnan(efficiencies)]
+        RTE.append(efficiencies)
+    
+    #using the monte carlo simulation
+    final_results_table=calc.simple_monte_carlo(RTE,N,labels1)
+    
 
 # Loads the stored values for membrane area and volume from the CSV
 def loadParams():
@@ -1290,8 +1318,7 @@ def menu():
         "13":total_PCV_plot,
         "14":theoretical_resistance_and_open_voltage,
         "15":conservation_of_mass,
-#        "16":resistance_evolution,
-#        "17":resistance_delta_time,
+        "16":monte_carlo_best_stack_long_title,
         'd': importFiles,
         'p': viewParams,
         'q': sys.exit
@@ -1325,8 +1352,7 @@ def optionDisplay():
     print("13 -> total_PCV_plot")
     print("14 -> Resistance start cycles")
     print("15 -> conservation of mass")
-#    print("16 -> Resistance time evolution")
-#    print("17 -> Resistance delta time")
+    print("16 -> Monte carlo simulation")
     print('-----------------------------------')
     print('d -> Import New Data')
     print('p -> View Current Parameters')

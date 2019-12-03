@@ -108,7 +108,14 @@ def makeConcentrationModel(calibrationPath):    # TODO: THe current values provi
 
 # Converts arrays of conductivity and temperature data to concentrations using a polynomial fit from a calibration standard
 def getConcentration(cond_data, temp_data):
+    if len(cond_data)<len(temp_data):
+        temp_data=temp_data[0:len(cond_data)]
+    else:
+        cond_data=cond_data[0:len(temp_data)]
+
+    
     calibrationPath = 'ConcentrationCalibration.xlsx'
+    
     model = makeConcentrationModel(calibrationPath)
     inputs = np.array([cond_data, temp_data]).transpose()   # Needs transposed
 
@@ -190,7 +197,7 @@ def theoretical_resistance(flowrate_s_raw,flowrate_r_raw,concentration_s,concent
     delta_as=1-np.divide(J*L,F*q_s* C_s)
     
     with np.errstate(all='ignore'):
-        R_c=np.where(J!=0,alpha*R*T/(F*J)*np.log(delta_ar/delta_as)*512,np.nan)
+        R_c=np.where(J!=0,alpha*R*T/(F*J)*np.log(delta_ar/delta_as)*1024,np.nan)
     
     return(R_c,R_membranes)
     
@@ -271,11 +278,65 @@ def concentration_polarization_resistance(I,V,time,boundary,window,V_theoretical
 
 def concentration_to_gamma(concentration):
     """This function takes the concentration as an input and uses a interpolation function to create the correct gamma as an output"""
-    molality=np.array([0.01,0.02,0.05,0.1,0.2, 0.3,0.5,0.7,1])
-    gamma=np.array([0.904,0.875,0.824,0.781,0.734,0.709,0.68,0.664,0.65])
+    molality=np.array([0,0.01,0.02,0.05,0.1,0.2, 0.3,0.5,0.7,1,5])
+    gamma=np.array([1,0.904,0.875,0.824,0.781,0.734,0.709,0.68,0.664,0.65,0.65])
     f=interp1d(molality,gamma)
-    
     gamma_new=f(concentration)
     return(gamma_new)
 
+
+
+    
+
+def simple_monte_carlo(a,size_sample,labels1):
+    
+    """This function takes from a few random distribution the samples and checks by sheer numbers which one is the likeliest to have the maximum value using a monte carlo simulation.
+    
+    """
+    
+    #random samples
+    print("random sampling")
+    y=np.empty(shape=(len(a),size_sample))
+    for i,x in enumerate(a):
+        b=np.random.choice(x,size=size_sample)
+        y[i,:]=b
+    
+    #check which ones wins
+    print("check the order of winners")
+    final_results=np.zeros(shape=(len(a),size_sample))
+    for i,j in enumerate(range(len(a)),1):
+        amax=np.amax(y,axis=0,keepdims=False)
+        amax=np.tile(amax,(len(a),1))
+        final_results=np.where(amax==y,i,final_results)
+        y=np.where(final_results!=0,0,y)
+    #counting
+    
+    print("table")
+    table=np.zeros(shape=(len(a),len(a)))
+     
+     
+    for i in range(len(a)):
+        single_array=final_results[i,:]
+        for j in range(len(a)):
+            print(i)
+            print(j)
+            
+            table[i,j]=np.sum(np.where(single_array==j+1,1,0))
+            
+    table=table/size_sample
+    print(table)
+        
+    return(table)
+    
+def double_integral(a,b,title="test"):
+    x,y=np.meshgrid(a,b)
+    z=x*y
+    z=z.flatten()
+    plt.figure(1)
+    plt.cla()
+    n,d,e=plt.hist(z,bins=10,weights=np.full(len(z),1/len(z)))
+    plt.xlim(0,1)
+    plt.xlabel("efficiency [-]")
+    plt.ylabel("probability [-]")
+    plt.title(r"$N dis {0:.2f}\pm {1:.2f}$".format(np.mean(z),np.std(z)))
     

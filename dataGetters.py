@@ -86,15 +86,7 @@ def pathToArray1(path,sensorNum,filtering):
 def pathToArray2(path):
     print(str(path))
     df = pd.read_csv(path, header=None, delimiter='\t')
-#    df=df.sort_values([3])
-    
-#    global T_start
-#    
-#    if T_start==None:
-#        T_start=df.values[:,3].astype(dtype="datetime64")
-#        T_start=T_start[0]-np.timedelta64(1,"D")
-#        
-#    time=np.append(T_start,df.values[:, 3])
+
     
     time=df.sort_values([3]).values[:,3]
     temps=df.sort_values([3]).values[:, 4]

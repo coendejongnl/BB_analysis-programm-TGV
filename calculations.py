@@ -288,7 +288,7 @@ def concentration_to_gamma(concentration):
 
     
 
-def simple_monte_carlo(a,size_sample,labels1):
+def simple_monte_carlo(a,size_sample):
     
     """This function takes from a few random distribution the samples and checks by sheer numbers which one is the likeliest to have the maximum value using a monte carlo simulation.
     
@@ -318,13 +318,10 @@ def simple_monte_carlo(a,size_sample,labels1):
     for i in range(len(a)):
         single_array=final_results[i,:]
         for j in range(len(a)):
-            print(i)
-            print(j)
             
             table[i,j]=np.sum(np.where(single_array==j+1,1,0))
             
     table=table/size_sample
-    print(table)
         
     return(table)
     

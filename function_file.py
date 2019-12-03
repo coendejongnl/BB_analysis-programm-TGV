@@ -2,11 +2,7 @@
 import directoryGetter
 import calculations as calc
 import dataGetters as getters
-import bootstrap 
 import dataReader
-import pathlib
-from datetime import datetime
-import dill  
 
 import os
 import sys
@@ -16,7 +12,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from scipy.signal import savgol_filter
-import scipy, scipy.stats
 
 
 #LC=None
@@ -1285,8 +1280,18 @@ def monte_carlo_best_stack_long_title():
         RTE.append(efficiencies)
     
     #using the monte carlo simulation
-    final_results_table=calc.simple_monte_carlo(RTE,N,labels1)
+    final_results_table=calc.simple_monte_carlo(RTE,N)
     
+    #creating a dataframe
+    dict1=dict()
+    for n,i in enumerate(labels1):
+        dict1[i]=final_results_table[:,n]
+        
+    df1= pd.DataFrame.from_dict(dict1, orient='index')
+    df1=df1.transpose()
+    print(df1)
+    
+    df1.to_excel("monte_carlo_simulation_results.xlsx")    
 
 # Loads the stored values for membrane area and volume from the CSV
 def loadParams():

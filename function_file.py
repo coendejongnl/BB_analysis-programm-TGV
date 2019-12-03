@@ -1281,7 +1281,7 @@ def monte_carlo_best_stack_long_title():
     
     #using the monte carlo simulation
     final_results_table=calc.simple_monte_carlo(RTE,N)
-    
+    final_results_table.transpose()
     #creating a dataframe
     dict1=dict()
     for n,i in enumerate(labels1):

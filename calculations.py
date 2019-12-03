@@ -293,7 +293,10 @@ def simple_monte_carlo(a,size_sample):
     """This function takes from a few random distribution the samples and checks by sheer numbers which one is the likeliest to have the maximum value using a monte carlo simulation.
     
     """
-    
+##    a=[]
+##    size_sample=50
+#    for i in range(3):
+#        a.append(np.random.rand(10)/(i+1))
     #random samples
     print("random sampling")
     y=np.empty(shape=(len(a),size_sample))
@@ -321,7 +324,7 @@ def simple_monte_carlo(a,size_sample):
             
             table[i,j]=np.sum(np.where(single_array==j+1,1,0))
             
-    table=table/size_sample
+    table=table/(size_sample)
         
     return(table)
     

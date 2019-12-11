@@ -5,6 +5,9 @@ Author: Thomas Richards
 Version: 1.0
 Author: Coen de Jong
 Version: 1.1
+
+note** There is a word document available which gives a short summary of each function and when to use it
+ask Juan for the documentation.
 '''
 
 # ======================================= Imports =================================================

@@ -14,6 +14,9 @@ EPSILON = 0.01  # Checks for values near this error value to catch errors
 time_filter=True # turn on or off to filter boundary intervals with a certain time treshold
 time_treshold=20*60 # everthing in seconds as the data is modified to 1 second intervals
 
+cut_off_filter=True #turn on or off to cut off at the end of the cycle
+cut_off_time=60*60 #cut off time at the end of the cycle if it continues for a long time without any charge
+
 # Function that takes current data from a supply and a load and returns the indices at Which
 # the system transitions between charging states.
 # Determines charging state by looking for where either device outputs 0's for extended periods
@@ -99,11 +102,13 @@ def startsToBounds(chargeStarts, chargeEnds):
     global time_filter
     if time_filter:
         (chargeBounds,dischargeBounds)=Bounds_to_short_filter(chargeBounds,dischargeBounds)
+        
     return chargeBounds, dischargeBounds
 
 
-#function filtering data of below a certain treshold
 def Bounds_to_short_filter(chargeBounds,dischargeBounds):
+    """This function filters all data which doesn't have a certain minimum treshold length"""
+    
     global time_treshold 
     
     ## first Filter filters all the windows which are below a certain time treshold called treshold
@@ -133,8 +138,35 @@ def Bounds_to_short_filter(chargeBounds,dischargeBounds):
     return(chargeBounds,dischargeBounds)
                       
 
+def EndsToBounds(chargeData, dischargeData,chargeBounds,dischargeBounds):
+    """ This function is a filter which cuts off the end of a cycle if it continues too long without anything happening on the load and supply (current) 
+    
+    note** this function won't cut off the data if it start with a charging cycle, stops for a while and continues after a long period. This might be an useful update in the future
+    """
+    global cut_off_time
+    
+    def cut_off_end_func(data,boundaries):
+        for i in range(boundaries.shape[0]):
+            try:
+                start=boundaries[i,0]
+                end=boundaries[i,1]
+                c1=data[start:end]
                 
+                #c1 is the segmented array
+                temp=[c1==0][0].astype(int)
+                temp=np.diff(temp)   
+                last_element=np.where(temp==1)[0][-1]
+                length_to_end=len(c1)-last_element
                 
+                if length_to_end>cut_off_time and ~np.all(c1[int(-length_to_end+1):]):
+                    boundaries[i,1]=start+last_element
+            except:
+                pass
+        return(boundaries)
+        
+    chargeBounds=cut_off_end_func(chargeData,chargeBounds)
+    dischargeBounds=cut_off_end_func(dischargeData,dischargeBounds)
+    return(chargeBounds,dischargeBounds)
                 
 # Converts continuous charging/discharging curves to only segments where it's either fully
 # charging or discharging.  Can be used for voltage, current, and power measurements
@@ -209,6 +241,9 @@ def setBounds(dataDir, sensorNum):
     loadCurrent = getters.getLoadCurrentData(dataDir, sensorNum)
     chargeStarts, dischargeStarts = determineCycles(supplyCurrent, loadCurrent, printing=False)     # Gets the index at which each cycle begins
     chargeBounds, dischargeBounds = startsToBounds(chargeStarts, dischargeStarts)                   # Converts starting indices to 2D arrays
+    if cut_off_filter:
+       chargeBounds,dischargeBounds =EndsToBounds(supplyCurrent,loadCurrent,chargeBounds,dischargeBounds)
+
     return np.array(chargeBounds), np.array(dischargeBounds)
 
 

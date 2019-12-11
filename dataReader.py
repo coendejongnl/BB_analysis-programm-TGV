@@ -158,7 +158,7 @@ def EndsToBounds(chargeData, dischargeData,chargeBounds,dischargeBounds):
                 last_element=np.where(temp==1)[0][-1]
                 length_to_end=len(c1)-last_element
                 
-                if length_to_end>cut_off_time and ~np.all(c1[int(-length_to_end+1):]):
+                if length_to_end>cut_off_time and np.all(c1[int(-length_to_end+1):]==0):
                     boundaries[i,1]=start+last_element
             except:
                 pass

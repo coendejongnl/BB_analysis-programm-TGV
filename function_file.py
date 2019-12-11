@@ -1181,7 +1181,7 @@ def theoretical_resistance_and_open_voltage():
         
 def conservation_of_mass():
     #test function
-    #
+    
     while True:
         a=str(input("(F)ujifilm of (E)voque?\n") )
         if a in "FfEe":
@@ -1206,10 +1206,11 @@ def conservation_of_mass():
         
         return(b)
         
-    [levels[1],levels[2],levels[3],concentrations[0],concentrations[1],concentrations[2],concentrations[3],concentrations[4],concentrations[5]]=same_length([levels[1],levels[2],levels[3],concentrations[0],concentrations[1],concentrations[2],concentrations[3],concentrations[4],concentrations[5]])
-    mass_s=levels[1]*(concentrations[0]+concentrations[1])
-    mass_d1=levels[2]*(concentrations[2]+concentrations[5])
-    mass_d2=levels[3]*(concentrations[3]+concentrations[4])
+        
+    [levels[0],levels[1],levels[2],concentrations[0],concentrations[1],concentrations[2],concentrations[3],concentrations[4],concentrations[5]]=same_length([levels[1],levels[2],levels[3],concentrations[0],concentrations[1],concentrations[2],concentrations[3],concentrations[4],concentrations[5]])
+    mass_s=levels[0]*(concentrations[0]+concentrations[1])
+    mass_d1=levels[1]*(concentrations[3]+concentrations[4])
+    mass_d2=levels[2]*(concentrations[2]+concentrations[5])
     mass_total=(mass_d1+mass_d2+mass_s)*58.44/1000
     
     
